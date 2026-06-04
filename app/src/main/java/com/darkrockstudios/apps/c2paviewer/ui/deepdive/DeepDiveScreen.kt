@@ -1,5 +1,6 @@
 package com.darkrockstudios.apps.c2paviewer.ui.deepdive
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -223,9 +224,15 @@ private fun AssertionEntry(assertion: C2paAssertion, index: Int) {
 	val actions = remember(assertion) {
 		if (AssertionParser.isActionsAssertion(assertion.label)) AssertionParser.parseActions(assertion.data) else emptyList()
 	}
+	// Show the technical label as a caption only when the friendly title differs (for unrecognised
+	// assertion types the title falls back to the raw label, which would just be a duplicate).
+	val title = assertionTitle(assertion.label)
+	val showLabel = title != assertion.label
 	if (actions.isNotEmpty()) {
-		Text(assertionTitle(assertion.label), style = MaterialTheme.typography.titleSmall)
-		Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+		Text(title, style = MaterialTheme.typography.titleSmall)
+		if (showLabel) {
+			Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+		}
 		Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
 			actions.forEach { ActionRow(it) }
 		}
@@ -237,14 +244,16 @@ private fun AssertionEntry(assertion: C2paAssertion, index: Int) {
 			verticalAlignment = Alignment.CenterVertically,
 		) {
 			Column(Modifier.weight(1f)) {
-				Text(assertionTitle(assertion.label), style = MaterialTheme.typography.titleSmall)
-				Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+				Text(title, style = MaterialTheme.typography.titleSmall)
+				if (showLabel) {
+					Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+				}
 			}
 			TextButton(onClick = { expanded = !expanded }) {
 				Text(stringResource(if (expanded) R.string.hide else R.string.show))
 			}
 		}
-		if (expanded) Mono(prettyPrint(assertion.data))
+		AnimatedVisibility(visible = expanded) { Mono(prettyPrint(assertion.data)) }
 	}
 }
 
@@ -434,7 +443,9 @@ private fun ExpandableCard(
 					Text(stringResource(if (expanded) R.string.hide else R.string.show))
 				}
 			}
-			if (expanded) content()
+			AnimatedVisibility(visible = expanded) {
+				Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { content() }
+			}
 		}
 	}
 }
