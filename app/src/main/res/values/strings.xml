@@ -57,6 +57,15 @@
     <string name="show">Show</string>
     <string name="hide">Hide</string>
 
+    <!-- Assertions (parsed actions) -->
+    <string name="assertion_title_actions">Actions</string>
+    <string name="assertion_title_creative_work">Creative work</string>
+    <string name="assertion_title_thumbnail">Thumbnail</string>
+    <string name="assertion_title_hash">Content hash</string>
+    <string name="assertion_using">Using %1$s</string>
+    <string name="assertion_source">Source: %1$s</string>
+    <string name="assertion_when">When %1$s</string>
+
     <!-- Trust management -->
     <string name="trust_title">Trusted authorities</string>
     <string name="trust_manage">Manage trusted authorities</string>

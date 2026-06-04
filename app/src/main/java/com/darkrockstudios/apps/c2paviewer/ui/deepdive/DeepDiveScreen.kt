@@ -15,9 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -35,13 +39,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
+import com.darkrockstudios.apps.c2paviewer.model.assertion.AssertionParser
+import com.darkrockstudios.apps.c2paviewer.model.assertion.ParsedAction
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.C2paManifestData
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.ValidationCategory
 import com.darkrockstudios.apps.c2paviewer.model.summary.OverallStatus
@@ -164,12 +173,101 @@ private fun AssertionsSection(manifest: C2paManifestData) {
 		}
 		assertions.forEachIndexed { index, a ->
 			if (index > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
-			Text(a.label, style = MaterialTheme.typography.titleSmall)
-			a.kind?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-			Mono(prettyPrint(a.data))
+			// Friendly title + the technical label as a caption for the curious.
+			Text(assertionTitle(a.label), style = MaterialTheme.typography.titleSmall)
+			Text(
+				a.label,
+				style = MaterialTheme.typography.labelSmall,
+				color = MaterialTheme.colorScheme.onSurfaceVariant,
+			)
+
+			val actions = remember(a) { if (AssertionParser.isActionsAssertion(a.label)) AssertionParser.parseActions(a.data) else emptyList() }
+			if (actions.isNotEmpty()) {
+				Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+					actions.forEach { ActionRow(it) }
+				}
+			} else {
+				Mono(prettyPrint(a.data))
+			}
 		}
 	}
 }
+
+/** Friendly category name for an assertion label; falls back to the raw label. */
+@Composable
+private fun assertionTitle(label: String): String = when {
+	AssertionParser.isActionsAssertion(label) -> stringResource(R.string.assertion_title_actions)
+	label == "stds.schema-org.CreativeWork" -> stringResource(R.string.assertion_title_creative_work)
+	label.startsWith("c2pa.thumbnail") -> stringResource(R.string.assertion_title_thumbnail)
+	label.startsWith("c2pa.hash") -> stringResource(R.string.assertion_title_hash)
+	else -> label
+}
+
+@Composable
+private fun ActionRow(action: ParsedAction) {
+	Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+		Icon(
+			imageVector = actionIcon(action.code),
+			contentDescription = null,
+			modifier = Modifier.size(20.dp).padding(top = 2.dp),
+			tint = MaterialTheme.colorScheme.primary,
+		)
+		Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+			Text(action.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+			action.description?.let {
+				Text(it, style = MaterialTheme.typography.bodySmall)
+			}
+			action.softwareAgent?.let {
+				Text(
+					stringResource(R.string.assertion_using, it),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+				)
+			}
+			action.whenIso?.let {
+				Text(
+					stringResource(R.string.assertion_when, it),
+					style = MaterialTheme.typography.labelSmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+				)
+			}
+			action.digitalSource?.let { source ->
+				if (source.isAi) {
+					AssistChip(
+						onClick = {},
+						label = { Text(source.label) },
+						leadingIcon = {
+							Icon(
+								painter = painterResource(R.drawable.ic_auto_awesome),
+								contentDescription = null,
+								modifier = Modifier.size(AssistChipDefaults.IconSize),
+							)
+						},
+						modifier = Modifier.padding(top = 2.dp),
+					)
+				} else {
+					Text(
+						stringResource(R.string.assertion_source, source.label),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+			}
+		}
+	}
+}
+
+private fun actionIcon(code: String): ImageVector = when {
+	code == "c2pa.created" || code == "c2pa.opened" || code == "c2pa.placed" -> Icons.Filled.Add
+	code in EDITING_ACTIONS -> Icons.Filled.Edit
+	else -> Icons.Filled.Info
+}
+
+private val EDITING_ACTIONS = setOf(
+	"c2pa.edited", "c2pa.cropped", "c2pa.color_adjustments", "c2pa.drawing",
+	"c2pa.filtered", "c2pa.resized", "c2pa.orientation", "c2pa.watermarked",
+	"c2pa.metadata", "c2pa.redacted",
+)
 
 @Composable
 private fun IngredientsSection(manifest: C2paManifestData) {
