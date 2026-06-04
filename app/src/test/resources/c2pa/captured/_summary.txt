@@ -1,0 +1,5 @@
+valid-C.jpg -> Manifest (json=4731 chars, detailed=5173)
+valid-multi-CAICAI.jpg -> Manifest (json=17126 chars, detailed=19869)
+invalid-sig.jpg -> Manifest (json=6416 chars, detailed=7086)
+tampered-dat.jpg -> Manifest (json=7078 chars, detailed=7669)
+no-manifest.jpg -> NoManifest
