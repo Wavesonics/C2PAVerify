@@ -3,15 +3,21 @@ package com.darkrockstudios.apps.c2paviewer.ui.deepdive
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -19,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -29,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -52,6 +60,7 @@ private val prettyJson = Json { prettyPrint = true; prettyPrintIndent = "  " }
 fun DeepDiveScreen(
 	viewModel: InspectionViewModel,
 	onBack: () -> Unit,
+	showBack: Boolean = true,
 ) {
 	val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -60,8 +69,10 @@ fun DeepDiveScreen(
 			TopAppBar(
 				title = { Text(stringResource(R.string.details_title)) },
 				navigationIcon = {
-					IconButton(onClick = onBack) {
-						Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+					if (showBack) {
+						IconButton(onClick = onBack) {
+							Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+						}
 					}
 				},
 			)
@@ -77,7 +88,7 @@ fun DeepDiveScreen(
 
 		LazyColumn(
 			modifier = Modifier.fillMaxSize().padding(innerPadding),
-			contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+			contentPadding = PaddingValues(16.dp),
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
 			item { ManifestSection(manifest) }
@@ -93,7 +104,7 @@ fun DeepDiveScreen(
 @Composable
 private fun ManifestSection(manifest: C2paManifestData) {
 	val m = manifest.activeManifest
-	SectionCard(stringResource(R.string.section_manifest)) {
+	SectionCard(stringResource(R.string.section_manifest), Icons.Filled.Info) {
 		KeyValue(stringResource(R.string.label_title), m?.title)
 		KeyValue(stringResource(R.string.label_format), m?.format)
 		KeyValue(stringResource(R.string.label_generator), m?.claimGenerator)
@@ -109,7 +120,7 @@ private fun SignatureSection(manifest: C2paManifestData) {
 		manifest.signerUntrusted -> stringResource(R.string.trust_untrusted)
 		else -> stringResource(R.string.trust_unknown)
 	}
-	SectionCard(stringResource(R.string.section_signature)) {
+	SectionCard(stringResource(R.string.section_signature), Icons.Filled.Lock) {
 		KeyValue(stringResource(R.string.label_issuer), sig?.issuer)
 		KeyValue(stringResource(R.string.label_common_name), sig?.commonName)
 		KeyValue(stringResource(R.string.label_algorithm), sig?.algorithm)
@@ -122,7 +133,7 @@ private fun SignatureSection(manifest: C2paManifestData) {
 @Composable
 private fun AssertionsSection(manifest: C2paManifestData) {
 	val assertions = manifest.activeManifest?.assertions.orEmpty()
-	ExpandableCard(stringResource(R.string.section_assertions, assertions.size)) {
+	ExpandableCard(stringResource(R.string.section_assertions, assertions.size), Icons.AutoMirrored.Filled.List) {
 		if (assertions.isEmpty()) {
 			Text(stringResource(R.string.empty_section), style = MaterialTheme.typography.bodySmall)
 		}
@@ -138,7 +149,7 @@ private fun AssertionsSection(manifest: C2paManifestData) {
 @Composable
 private fun IngredientsSection(manifest: C2paManifestData) {
 	val ingredients = manifest.activeManifest?.ingredients.orEmpty()
-	ExpandableCard(stringResource(R.string.section_ingredients, ingredients.size)) {
+	ExpandableCard(stringResource(R.string.section_ingredients, ingredients.size), Icons.AutoMirrored.Filled.List) {
 		if (ingredients.isEmpty()) {
 			Text(stringResource(R.string.empty_section), style = MaterialTheme.typography.bodySmall)
 		}
@@ -154,7 +165,7 @@ private fun IngredientsSection(manifest: C2paManifestData) {
 @Composable
 private fun ValidationSection(manifest: C2paManifestData) {
 	val issues = manifest.validationIssues
-	ExpandableCard(stringResource(R.string.section_validation, issues.size)) {
+	ExpandableCard(stringResource(R.string.section_validation, issues.size), Icons.Filled.CheckCircle) {
 		if (issues.isEmpty()) {
 			Text(stringResource(R.string.empty_section), style = MaterialTheme.typography.bodySmall)
 		}
@@ -172,7 +183,7 @@ private fun ValidationSection(manifest: C2paManifestData) {
 
 @Composable
 private fun RawJsonSection(manifest: C2paManifestData) {
-	ExpandableCard(stringResource(R.string.section_raw_json), initiallyExpanded = false) {
+	ExpandableCard(stringResource(R.string.section_raw_json), Icons.Filled.Info, initiallyExpanded = false) {
 		Mono(remember(manifest) { prettyPrint(manifest.rawDetailedJson ?: manifest.rawManifestJson) })
 	}
 }
@@ -180,10 +191,30 @@ private fun RawJsonSection(manifest: C2paManifestData) {
 // --- reusable bits ---
 
 @Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
+private fun SectionHeader(title: String, icon: ImageVector?, trailing: @Composable () -> Unit = {}) {
+	Row(
+		modifier = Modifier.fillMaxWidth(),
+		horizontalArrangement = Arrangement.SpaceBetween,
+		verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+	) {
+		Row(
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+			verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+		) {
+			if (icon != null) {
+				Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+			}
+			Text(title, style = MaterialTheme.typography.titleMedium)
+		}
+		trailing()
+	}
+}
+
+@Composable
+private fun SectionCard(title: String, icon: ImageVector? = null, content: @Composable () -> Unit) {
 	Card(Modifier.fillMaxWidth()) {
 		Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-			Text(title, style = MaterialTheme.typography.titleMedium)
+			SectionHeader(title, icon)
 			content()
 		}
 	}
@@ -192,14 +223,14 @@ private fun SectionCard(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun ExpandableCard(
 	title: String,
+	icon: ImageVector? = null,
 	initiallyExpanded: Boolean = true,
 	content: @Composable () -> Unit,
 ) {
 	var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
 	Card(Modifier.fillMaxWidth()) {
 		Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-			Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-				Text(title, style = MaterialTheme.typography.titleMedium)
+			SectionHeader(title, icon) {
 				TextButton(onClick = { expanded = !expanded }) {
 					Text(stringResource(if (expanded) R.string.hide else R.string.show))
 				}
@@ -220,12 +251,21 @@ private fun KeyValue(label: String, value: String?) {
 
 @Composable
 private fun Mono(text: String) {
-	Text(
-		text = text,
-		fontFamily = FontFamily.Monospace,
-		style = MaterialTheme.typography.bodySmall,
-		modifier = Modifier.horizontalScroll(rememberScrollState()),
-	)
+	Surface(
+		color = MaterialTheme.colorScheme.surfaceVariant,
+		shape = RoundedCornerShape(8.dp),
+		modifier = Modifier.fillMaxWidth(),
+	) {
+		Text(
+			text = text,
+			fontFamily = FontFamily.Monospace,
+			style = MaterialTheme.typography.bodySmall,
+			color = MaterialTheme.colorScheme.onSurfaceVariant,
+			modifier = Modifier
+				.horizontalScroll(rememberScrollState())
+				.padding(12.dp),
+		)
+	}
 }
 
 private fun prettyPrint(raw: String): String =

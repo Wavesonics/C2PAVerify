@@ -1,9 +1,11 @@
 package com.darkrockstudios.apps.c2paviewer.ui.viewer
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,7 +40,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ViewerScreen(
 	imageUri: String?,
 	onBack: () -> Unit,
-	onOpenDetails: () -> Unit,
+	onOpenDetails: (() -> Unit)?,
 	viewModel: InspectionViewModel = koinViewModel(),
 ) {
 	LaunchedEffect(imageUri) {
@@ -64,6 +66,7 @@ fun ViewerScreen(
 		Box(
 			modifier = Modifier
 				.fillMaxSize()
+				.background(MaterialTheme.colorScheme.surfaceContainerHigh)
 				.padding(innerPadding),
 			contentAlignment = Alignment.Center,
 		) {
@@ -86,7 +89,8 @@ fun ViewerScreen(
 				modifier = Modifier
 					.align(Alignment.BottomCenter)
 					.navigationBarsPadding()
-					.padding(16.dp),
+					.padding(16.dp)
+					.widthIn(max = 520.dp),
 			)
 		}
 	}
@@ -95,7 +99,7 @@ fun ViewerScreen(
 @Composable
 private fun InspectionOverlay(
 	state: InspectionUiState,
-	onOpenDetails: () -> Unit,
+	onOpenDetails: (() -> Unit)?,
 	modifier: Modifier = Modifier,
 ) {
 	when (state) {
@@ -103,7 +107,7 @@ private fun InspectionOverlay(
 		InspectionUiState.Loading -> CircularProgressIndicator(modifier = modifier)
 		is InspectionUiState.Loaded -> SummaryCard(
 			summary = state.result.summary,
-			onViewDetails = if (state.result.manifest != null) onOpenDetails else null,
+			onViewDetails = onOpenDetails?.takeIf { state.result.manifest != null },
 			modifier = modifier,
 		)
 
