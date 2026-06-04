@@ -11,4 +11,17 @@
     <string name="back">Back</string>
     <string name="selected_photo">Selected photo</string>
     <string name="no_image">No photo selected</string>
+
+    <!-- Summary card -->
+    <string name="inspecting">Inspecting…</string>
+    <string name="inspect_error">Couldn\'t read C2PA data: %1$s</string>
+    <string name="status_no_manifest">No Content Credentials</string>
+    <string name="status_trusted">Signed &amp; trusted</string>
+    <string name="status_untrusted">Signed — untrusted signer</string>
+    <string name="status_tampered">Invalid / tampered</string>
+    <string name="status_no_manifest_body">This photo has no embedded C2PA / Content Authenticity data.</string>
+    <string name="summary_signer">Signed by %1$s</string>
+    <string name="summary_generator">Created with %1$s</string>
+    <string name="summary_signed_time">Signed %1$s</string>
+    <string name="ai_badge">AI-generated</string>
 </resources>
