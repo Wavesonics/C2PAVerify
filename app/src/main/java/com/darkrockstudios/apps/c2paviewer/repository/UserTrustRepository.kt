@@ -4,6 +4,7 @@ import com.darkrockstudios.apps.c2paviewer.datasource.db.dao.UserTrustDao
 import com.darkrockstudios.apps.c2paviewer.datasource.db.entity.UserTrustRuleEntity
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustRule
 import com.darkrockstudios.apps.c2paviewer.model.trust.UserTrustRule
+import com.darkrockstudios.apps.c2paviewer.model.trust.anchorSubjectOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -19,6 +20,13 @@ class UserTrustRepository(private val dao: UserTrustDao) {
 
 	suspend fun ruleFor(authorityKey: String): UserTrustRule? =
 		dao.observeRule(authorityKey).first()?.toDomain()
+
+	/** CA subjects the user has dis-allowed (CA-level DENY rules). */
+	suspend fun blockedAnchorSubjects(): Set<String> =
+		observeRules().first()
+			.filter { it.rule == TrustRule.DENY }
+			.mapNotNull { anchorSubjectOf(it.authorityKey) }
+			.toSet()
 
 	suspend fun setRule(rule: UserTrustRule) = dao.upsert(rule.toEntity())
 

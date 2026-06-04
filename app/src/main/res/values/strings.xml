@@ -74,6 +74,8 @@
     <string name="trust_your_rules_empty">No custom rules yet. Open a photo\'s details to allow or deny its signer.</string>
     <string name="trust_default_cas">Default trusted authorities (%1$d)</string>
     <string name="trust_expires">Expires %1$s</string>
+    <string name="trust_block_authority">Dis-allow this authority</string>
+    <string name="trust_unblock_authority">Allow this authority again</string>
     <string name="rule_allow">ALLOW</string>
     <string name="rule_deny">DENY</string>
     <string name="remove">Remove</string>

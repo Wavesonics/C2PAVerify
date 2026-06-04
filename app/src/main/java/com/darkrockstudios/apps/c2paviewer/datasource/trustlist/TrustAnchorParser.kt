@@ -29,6 +29,23 @@ class TrustAnchorParser {
 		}.sortedBy { it.displayName.lowercase() }
 	}
 
+	/**
+	 * Returns [pem] with any certificate whose subject is in [excludedSubjects] removed, so a
+	 * dis-allowed CA is no longer a trust anchor. Subjects are computed exactly as in [parse], so
+	 * the values stored from a [TrustAnchorInfo.subject] match. Unparseable blocks are kept.
+	 */
+	suspend fun filterPem(pem: String, excludedSubjects: Set<String>): String =
+		withContext(Dispatchers.IO) {
+			if (excludedSubjects.isEmpty()) return@withContext pem
+			val factory = CertificateFactory.getInstance("X.509")
+			pemCertificateBlocks(pem).filter { block ->
+				val subject = runCatching {
+					(factory.generateCertificate(block.byteInputStream()) as X509Certificate).subjectX500Principal.name
+				}.getOrNull()
+				subject == null || subject !in excludedSubjects
+			}.joinToString("\n")
+		}
+
 	private fun pemCertificateBlocks(pem: String): List<String> {
 		val begin = "-----BEGIN CERTIFICATE-----"
 		val end = "-----END CERTIFICATE-----"

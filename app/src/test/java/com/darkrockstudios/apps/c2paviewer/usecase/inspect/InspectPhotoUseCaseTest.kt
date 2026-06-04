@@ -41,16 +41,18 @@ class InspectPhotoUseCaseTest {
 			coEvery { load(any()) } returns ImageSource.Bytes(ByteArray(0), "image/jpeg")
 		}
 		val trustListRepo = mockk<TrustListRepository> {
-			coEvery { current() } returns TrustMaterial("-----BEGIN CERTIFICATE-----\nx\n-----END CERTIFICATE-----")
+			coEvery { current(any()) } returns TrustMaterial("-----BEGIN CERTIFICATE-----\nx\n-----END CERTIFICATE-----")
 		}
 		val userTrust = mockk<UserTrustRepository> {
 			coEvery { ruleFor(any()) } returns null
+			coEvery { blockedAnchorSubjects() } returns emptySet()
 		}
 		return InspectPhotoUseCase(
 			imageRepo,
 			C2paManifestRepository(reader, parser),
 			trustListRepo,
 			TrustEvaluationService(userTrust),
+			userTrust,
 		)
 	}
 

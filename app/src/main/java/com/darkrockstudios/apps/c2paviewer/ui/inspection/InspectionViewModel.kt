@@ -9,6 +9,7 @@ import com.darkrockstudios.apps.c2paviewer.model.trust.authorityKeyOf
 import com.darkrockstudios.apps.c2paviewer.usecase.inspect.InspectPhotoUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.share.ShareReportUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ClearAuthorityRuleUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.trust.ObserveUserTrustRulesUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.SetAuthorityRuleUseCase
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 sealed interface InspectionUiState {
@@ -31,10 +33,22 @@ class InspectionViewModel(
 	private val setAuthorityRule: SetAuthorityRuleUseCase,
 	private val clearAuthorityRule: ClearAuthorityRuleUseCase,
 	private val shareReport: ShareReportUseCase,
+	observeUserRules: ObserveUserTrustRulesUseCase,
 ) : ViewModel() {
 
 	private val _state = MutableStateFlow<InspectionUiState>(InspectionUiState.Idle)
 	val state: StateFlow<InspectionUiState> = _state.asStateFlow()
+
+	init {
+		// Re-inspect the current photo whenever the user's trust rules change — including a CA
+		// dis-allowed from the Trust screen — so the verdict stays in sync without an app restart.
+		// drop(1) skips the initial snapshot (nothing is loaded yet at startup).
+		viewModelScope.launch {
+			observeUserRules().drop(1).collect {
+				lastInspectedUri?.let { uri -> runInspection(uri) }
+			}
+		}
+	}
 
 	/** True while a shareable report is being rendered. */
 	private val _sharing = MutableStateFlow(false)
@@ -65,7 +79,7 @@ class InspectionViewModel(
 			} else {
 				setAuthorityRule(key, displayName, rule, System.currentTimeMillis())
 			}
-			lastInspectedUri?.let { runInspection(it) }
+			// Re-inspection is driven by the rules observer in init (single source of truth).
 		}
 	}
 

@@ -3,11 +3,14 @@ package com.darkrockstudios.apps.c2paviewer.ui.trust
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustAnchorInfo
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustRule
 import com.darkrockstudios.apps.c2paviewer.model.trust.UserTrustRule
+import com.darkrockstudios.apps.c2paviewer.model.trust.anchorAuthorityKey
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ClearAuthorityRuleUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.GetTrustListUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ObserveUserTrustRulesUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.RefreshTrustListUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.trust.SetAuthorityRuleUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.TrustListView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +32,7 @@ class TrustManagementViewModel(
 	private val getTrustList: GetTrustListUseCase,
 	observeUserRules: ObserveUserTrustRulesUseCase,
 	private val clearAuthorityRule: ClearAuthorityRuleUseCase,
+	private val setAuthorityRule: SetAuthorityRuleUseCase,
 	private val refreshTrustList: RefreshTrustListUseCase,
 ) : ViewModel() {
 
@@ -67,5 +71,17 @@ class TrustManagementViewModel(
 
 	fun removeRule(authorityKey: String) {
 		viewModelScope.launch { clearAuthorityRule(authorityKey) }
+	}
+
+	/** Add or remove a default CA from the user's dis-allow list. */
+	fun setAnchorBlocked(anchor: TrustAnchorInfo, blocked: Boolean) {
+		val key = anchorAuthorityKey(anchor.subject)
+		viewModelScope.launch {
+			if (blocked) {
+				setAuthorityRule(key, anchor.displayName, TrustRule.DENY, System.currentTimeMillis())
+			} else {
+				clearAuthorityRule(key)
+			}
+		}
 	}
 }

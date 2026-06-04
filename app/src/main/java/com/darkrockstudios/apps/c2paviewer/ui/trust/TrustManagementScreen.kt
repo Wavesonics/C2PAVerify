@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -28,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,7 @@ import java.text.DateFormat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustAnchorInfo
+import com.darkrockstudios.apps.c2paviewer.model.trust.anchorSubjectOf
 import com.darkrockstudios.apps.c2paviewer.ui.common.plus
 import com.darkrockstudios.apps.c2paviewer.model.trust.UserTrustRule
 import org.koin.androidx.compose.koinViewModel
@@ -71,34 +74,42 @@ fun TrustManagementScreen(
 			)
 		},
 	) { innerPadding ->
+		// Subjects the user has dis-allowed (drives the per-anchor toggle state).
+		val blockedSubjects = state.rules.mapNotNull { anchorSubjectOf(it.authorityKey) }.toSet()
+		// Cap width and centre the list so it doesn't stretch awkwardly wide on tablets.
+		val itemModifier = Modifier.widthIn(max = ListMaxWidth).fillMaxWidth()
 		LazyColumn(
 			modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
 			contentPadding = innerPadding + PaddingValues(16.dp),
 			verticalArrangement = Arrangement.spacedBy(12.dp),
+			horizontalAlignment = Alignment.CenterHorizontally,
 		) {
 			item {
-				val updated = state.lastUpdatedEpochMs
-				Text(
-					text = if (updated != null) {
-						stringResource(R.string.trust_updated, DateFormat.getDateInstance().format(Date(updated)))
-					} else {
-						stringResource(R.string.trust_bundled)
-					},
-					style = MaterialTheme.typography.bodySmall,
-					color = MaterialTheme.colorScheme.onSurfaceVariant,
-				)
-				state.error?.let {
+				Column(itemModifier) {
+					val updated = state.lastUpdatedEpochMs
 					Text(
-						stringResource(R.string.trust_refresh_failed, it),
+						text = if (updated != null) {
+							stringResource(R.string.trust_updated, DateFormat.getDateInstance().format(Date(updated)))
+						} else {
+							stringResource(R.string.trust_bundled)
+						},
 						style = MaterialTheme.typography.bodySmall,
-						color = MaterialTheme.colorScheme.error,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
 					)
+					state.error?.let {
+						Text(
+							stringResource(R.string.trust_refresh_failed, it),
+							style = MaterialTheme.typography.bodySmall,
+							color = MaterialTheme.colorScheme.error,
+						)
+					}
 				}
 			}
 			item {
 				Text(
 					stringResource(R.string.trust_your_rules, state.rules.size),
 					style = MaterialTheme.typography.titleMedium,
+					modifier = itemModifier,
 				)
 			}
 			if (state.rules.isEmpty()) {
@@ -107,11 +118,12 @@ fun TrustManagementScreen(
 						stringResource(R.string.trust_your_rules_empty),
 						style = MaterialTheme.typography.bodyMedium,
 						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = itemModifier,
 					)
 				}
 			} else {
 				items(state.rules, key = { it.authorityKey }) { rule ->
-					RuleRow(rule, onRemove = { viewModel.removeRule(rule.authorityKey) })
+					RuleRow(rule, itemModifier, onRemove = { viewModel.removeRule(rule.authorityKey) })
 				}
 			}
 
@@ -119,18 +131,25 @@ fun TrustManagementScreen(
 				Text(
 					stringResource(R.string.trust_default_cas, state.anchors.size),
 					style = MaterialTheme.typography.titleMedium,
-					modifier = Modifier.padding(top = 8.dp),
+					modifier = itemModifier.padding(top = 8.dp),
 				)
 			}
-			items(state.anchors, key = { it.subject }) { anchor -> AnchorRow(anchor) }
+			items(state.anchors, key = { it.subject }) { anchor ->
+				AnchorRow(
+					anchor = anchor,
+					blocked = anchor.subject in blockedSubjects,
+					onToggleBlocked = { viewModel.setAnchorBlocked(anchor, it) },
+					modifier = itemModifier,
+				)
+			}
 		}
 	}
 }
 
 @Composable
-private fun RuleRow(rule: UserTrustRule, onRemove: () -> Unit) {
+private fun RuleRow(rule: UserTrustRule, modifier: Modifier = Modifier, onRemove: () -> Unit) {
 	val allow = rule.rule.name == "ALLOW"
-	Card(Modifier.fillMaxWidth()) {
+	Card(modifier.fillMaxWidth()) {
 		Row(
 			modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
 			verticalAlignment = Alignment.CenterVertically,
@@ -151,15 +170,46 @@ private fun RuleRow(rule: UserTrustRule, onRemove: () -> Unit) {
 }
 
 @Composable
-private fun AnchorRow(anchor: TrustAnchorInfo) {
-	Card(Modifier.fillMaxWidth()) {
-		Column(Modifier.padding(16.dp)) {
-			Text(anchor.displayName, style = MaterialTheme.typography.bodyLarge)
-			anchor.notAfterEpochMs?.let {
-				Text(
-					stringResource(R.string.trust_expires, dateFormat.format(Date(it))),
-					style = MaterialTheme.typography.bodySmall,
-					color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun AnchorRow(
+	anchor: TrustAnchorInfo,
+	blocked: Boolean,
+	onToggleBlocked: (Boolean) -> Unit,
+	modifier: Modifier = Modifier,
+) {
+	Card(modifier.fillMaxWidth()) {
+		Row(
+			modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
+				Text(anchor.displayName, style = MaterialTheme.typography.bodyLarge)
+				anchor.notAfterEpochMs?.let {
+					Text(
+						stringResource(R.string.trust_expires, dateFormat.format(Date(it))),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+				if (blocked) {
+					Text(
+						stringResource(R.string.rule_deny),
+						style = MaterialTheme.typography.labelMedium,
+						fontWeight = FontWeight.SemiBold,
+						color = MaterialTheme.colorScheme.error,
+					)
+				}
+			}
+			IconButton(onClick = { onToggleBlocked(!blocked) }) {
+				Icon(
+					painter = painterResource(R.drawable.ic_block),
+					contentDescription = stringResource(
+						if (blocked) R.string.trust_unblock_authority else R.string.trust_block_authority,
+					),
+					tint = if (blocked) {
+						MaterialTheme.colorScheme.error
+					} else {
+						MaterialTheme.colorScheme.onSurfaceVariant
+					},
 				)
 			}
 		}
@@ -167,3 +217,6 @@ private fun AnchorRow(anchor: TrustAnchorInfo) {
 }
 
 private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
+/** Caps the list width on large screens (matches the landing). */
+private val ListMaxWidth = 560.dp

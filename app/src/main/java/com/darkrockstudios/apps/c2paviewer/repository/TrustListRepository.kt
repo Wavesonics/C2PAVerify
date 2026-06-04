@@ -33,6 +33,16 @@ class TrustListRepository(
 		return if (cachedPem != null) TrustMaterial(cachedPem) else asset.loadBundled()
 	}
 
+	/**
+	 * Active trust material with the given CA subjects removed from the anchors (the user's
+	 * dis-allow list), so c2pa treats anything chaining to them as untrusted.
+	 */
+	suspend fun current(excludingSubjects: Set<String>): TrustMaterial {
+		val base = current()
+		if (excludingSubjects.isEmpty()) return base
+		return base.copy(trustAnchorsPem = parser.filterPem(base.trustAnchorsPem, excludingSubjects))
+	}
+
 	/** Parsed view of the trusted signing CAs in the active trust list. */
 	suspend fun anchors(): List<TrustAnchorInfo> = parser.parse(current().trustAnchorsPem)
 

@@ -6,6 +6,7 @@ import com.darkrockstudios.apps.c2paviewer.model.trust.TrustLevel
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestRepository
 import com.darkrockstudios.apps.c2paviewer.repository.ImageRepository
 import com.darkrockstudios.apps.c2paviewer.repository.TrustListRepository
+import com.darkrockstudios.apps.c2paviewer.repository.UserTrustRepository
 import com.darkrockstudios.apps.c2paviewer.service.TrustEvaluationService
 
 /**
@@ -18,10 +19,12 @@ class InspectPhotoUseCase(
 	private val manifestRepository: C2paManifestRepository,
 	private val trustListRepository: TrustListRepository,
 	private val trustEvaluationService: TrustEvaluationService,
+	private val userTrustRepository: UserTrustRepository,
 ) {
 	suspend operator fun invoke(imageUri: String): InspectionResult {
 		val image = imageRepository.load(imageUri)
-		val trust = trustListRepository.current()
+		// Honour the user's dis-allowed CAs by dropping them from the trust anchors.
+		val trust = trustListRepository.current(userTrustRepository.blockedAnchorSubjects())
 		return when (val result = manifestRepository.inspect(image, trust)) {
 			is C2paManifestRepository.ManifestResult.NoManifest ->
 				InspectionResult(
