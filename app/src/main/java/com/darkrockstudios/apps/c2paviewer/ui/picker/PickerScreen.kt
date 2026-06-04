@@ -107,60 +107,68 @@ fun PickerScreen(
 			)
 		},
 	) { innerPadding ->
+		// Centred, width-capped body so it doesn't stretch awkwardly wide on tablets.
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
 				.padding(innerPadding)
-				.verticalScroll(rememberScrollState())
-				.padding(horizontal = 24.dp, vertical = 32.dp),
+				.verticalScroll(rememberScrollState()),
 			horizontalAlignment = Alignment.CenterHorizontally,
 			verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
 		) {
-			Icon(
-				imageVector = Icons.Default.Search,
-				contentDescription = null,
-				modifier = Modifier.size(72.dp),
-				tint = MaterialTheme.colorScheme.primary,
-			)
-			Text(
-				text = stringResource(R.string.empty_title),
-				style = MaterialTheme.typography.headlineSmall,
-				textAlign = TextAlign.Center,
-			)
-			Text(
-				text = stringResource(R.string.empty_body),
-				style = MaterialTheme.typography.bodyMedium,
-				color = MaterialTheme.colorScheme.onSurfaceVariant,
-				textAlign = TextAlign.Center,
-			)
-			Button(
-				onClick = {
-					pickMedia.launch(
-						PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-					)
-				},
-			) {
-				Text(stringResource(R.string.pick_photo))
-			}
-
-			Text(
-				text = stringResource(R.string.example_section_title),
-				style = MaterialTheme.typography.titleMedium,
+			Column(
 				modifier = Modifier
+					.widthIn(max = BodyMaxWidth)
 					.fillMaxWidth()
-					.widthIn(max = 480.dp)
-					.padding(top = 16.dp),
-			)
-			exampleImages.forEach { example ->
-				ExampleCard(
-					example = example,
-					onClick = { onImagePicked(example.assetUri) },
-					modifier = Modifier.widthIn(max = 480.dp),
+					.padding(horizontal = 24.dp, vertical = 32.dp),
+				horizontalAlignment = Alignment.CenterHorizontally,
+				verticalArrangement = Arrangement.spacedBy(16.dp),
+			) {
+				Icon(
+					imageVector = Icons.Default.Search,
+					contentDescription = null,
+					modifier = Modifier.size(72.dp),
+					tint = MaterialTheme.colorScheme.primary,
 				)
+				Text(
+					text = stringResource(R.string.empty_title),
+					style = MaterialTheme.typography.headlineSmall,
+					textAlign = TextAlign.Center,
+				)
+				Text(
+					text = stringResource(R.string.empty_body),
+					style = MaterialTheme.typography.bodyMedium,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+					textAlign = TextAlign.Center,
+				)
+				Button(
+					onClick = {
+						pickMedia.launch(
+							PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+						)
+					},
+				) {
+					Text(stringResource(R.string.pick_photo))
+				}
+
+				Text(
+					text = stringResource(R.string.example_section_title),
+					style = MaterialTheme.typography.titleMedium,
+					modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+				)
+				exampleImages.forEach { example ->
+					ExampleCard(
+						example = example,
+						onClick = { onImagePicked(example.assetUri) },
+					)
+				}
 			}
 		}
 	}
 }
+
+/** The landing body is capped to this width so it stays readable on large screens. */
+private val BodyMaxWidth = 560.dp
 
 @Composable
 private fun ExampleCard(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,6 +35,7 @@ import java.text.DateFormat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustAnchorInfo
+import com.darkrockstudios.apps.c2paviewer.ui.common.plus
 import com.darkrockstudios.apps.c2paviewer.model.trust.UserTrustRule
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -70,8 +72,8 @@ fun TrustManagementScreen(
 		},
 	) { innerPadding ->
 		LazyColumn(
-			modifier = Modifier.fillMaxSize().padding(innerPadding),
-			contentPadding = PaddingValues(16.dp),
+			modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
+			contentPadding = innerPadding + PaddingValues(16.dp),
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
 			item {

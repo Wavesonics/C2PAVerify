@@ -1,10 +1,12 @@
 package com.darkrockstudios.apps.c2paviewer.ui.deepdive
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -41,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -51,10 +54,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
 import com.darkrockstudios.apps.c2paviewer.model.assertion.AssertionParser
 import com.darkrockstudios.apps.c2paviewer.model.assertion.ParsedAction
+import com.darkrockstudios.apps.c2paviewer.model.c2pa.C2paAssertion
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.C2paManifestData
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.ValidationCategory
 import com.darkrockstudios.apps.c2paviewer.model.summary.OverallStatus
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustRule
+import com.darkrockstudios.apps.c2paviewer.ui.common.plus
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionUiState
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import kotlinx.serialization.json.Json
@@ -99,8 +104,8 @@ fun DeepDiveScreen(
 		}
 
 		LazyColumn(
-			modifier = Modifier.fillMaxSize().padding(innerPadding),
-			contentPadding = PaddingValues(16.dp),
+			modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
+			contentPadding = innerPadding + PaddingValues(16.dp),
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
 			item { ManifestSection(manifest) }
@@ -173,23 +178,43 @@ private fun AssertionsSection(manifest: C2paManifestData) {
 		}
 		assertions.forEachIndexed { index, a ->
 			if (index > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
-			// Friendly title + the technical label as a caption for the curious.
-			Text(assertionTitle(a.label), style = MaterialTheme.typography.titleSmall)
-			Text(
-				a.label,
-				style = MaterialTheme.typography.labelSmall,
-				color = MaterialTheme.colorScheme.onSurfaceVariant,
-			)
+			AssertionEntry(a, index)
+		}
+	}
+}
 
-			val actions = remember(a) { if (AssertionParser.isActionsAssertion(a.label)) AssertionParser.parseActions(a.data) else emptyList() }
-			if (actions.isNotEmpty()) {
-				Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-					actions.forEach { ActionRow(it) }
-				}
-			} else {
-				Mono(prettyPrint(a.data))
+/**
+ * One assertion. Parsed `c2pa.actions` render as an always-visible action list; every other
+ * assertion shows its raw JSON behind a per-entry toggle, collapsed by default (some, like content
+ * hashes, are large and noisy).
+ */
+@Composable
+private fun AssertionEntry(assertion: C2paAssertion, index: Int) {
+	val actions = remember(assertion) {
+		if (AssertionParser.isActionsAssertion(assertion.label)) AssertionParser.parseActions(assertion.data) else emptyList()
+	}
+	if (actions.isNotEmpty()) {
+		Text(assertionTitle(assertion.label), style = MaterialTheme.typography.titleSmall)
+		Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+		Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+			actions.forEach { ActionRow(it) }
+		}
+	} else {
+		var expanded by rememberSaveable(index, assertion.label) { mutableStateOf(false) }
+		Row(
+			modifier = Modifier.fillMaxWidth(),
+			horizontalArrangement = Arrangement.SpaceBetween,
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Column(Modifier.weight(1f)) {
+				Text(assertionTitle(assertion.label), style = MaterialTheme.typography.titleSmall)
+				Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+			}
+			TextButton(onClick = { expanded = !expanded }) {
+				Text(stringResource(if (expanded) R.string.hide else R.string.show))
 			}
 		}
+		if (expanded) Mono(prettyPrint(assertion.data))
 	}
 }
 
@@ -288,7 +313,21 @@ private fun IngredientsSection(manifest: C2paManifestData) {
 @Composable
 private fun ValidationSection(manifest: C2paManifestData) {
 	val issues = manifest.validationIssues
-	ExpandableCard(stringResource(R.string.section_validation, issues.size), Icons.Filled.CheckCircle) {
+	// When nothing failed, the long list of green "SUCCESS" rows is just noise — collapse it by
+	// default and show a satisfying green check; expand automatically when something failed.
+	val allPassed = issues.isNotEmpty() && issues.none { it.category == ValidationCategory.FAILURE }
+	val passedGreen = if (isSystemInDarkTheme()) Color(0xFF6FD08C) else Color(0xFF2E7D32)
+	val title = if (allPassed) {
+		stringResource(R.string.validation_all_passed, issues.size)
+	} else {
+		stringResource(R.string.section_validation, issues.size)
+	}
+	ExpandableCard(
+		title = title,
+		icon = Icons.Filled.CheckCircle,
+		iconTint = if (allPassed) passedGreen else MaterialTheme.colorScheme.primary,
+		initiallyExpanded = !allPassed,
+	) {
 		if (issues.isEmpty()) {
 			Text(stringResource(R.string.empty_section), style = MaterialTheme.typography.bodySmall)
 		}
@@ -314,18 +353,23 @@ private fun RawJsonSection(manifest: C2paManifestData) {
 // --- reusable bits ---
 
 @Composable
-private fun SectionHeader(title: String, icon: ImageVector?, trailing: @Composable () -> Unit = {}) {
+private fun SectionHeader(
+	title: String,
+	icon: ImageVector?,
+	iconTint: Color = MaterialTheme.colorScheme.primary,
+	trailing: @Composable () -> Unit = {},
+) {
 	Row(
 		modifier = Modifier.fillMaxWidth(),
 		horizontalArrangement = Arrangement.SpaceBetween,
-		verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+		verticalAlignment = Alignment.CenterVertically,
 	) {
 		Row(
 			horizontalArrangement = Arrangement.spacedBy(8.dp),
-			verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+			verticalAlignment = Alignment.CenterVertically,
 		) {
 			if (icon != null) {
-				Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+				Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = iconTint)
 			}
 			Text(title, style = MaterialTheme.typography.titleMedium)
 		}
@@ -347,13 +391,14 @@ private fun SectionCard(title: String, icon: ImageVector? = null, content: @Comp
 private fun ExpandableCard(
 	title: String,
 	icon: ImageVector? = null,
+	iconTint: Color = MaterialTheme.colorScheme.primary,
 	initiallyExpanded: Boolean = true,
 	content: @Composable () -> Unit,
 ) {
 	var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
 	Card(Modifier.fillMaxWidth()) {
 		Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-			SectionHeader(title, icon) {
+			SectionHeader(title, icon, iconTint) {
 				TextButton(onClick = { expanded = !expanded }) {
 					Text(stringResource(if (expanded) R.string.hide else R.string.show))
 				}

@@ -1,10 +1,13 @@
 package com.darkrockstudios.apps.c2paviewer.ui.viewer
 
 import android.content.Intent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -22,10 +25,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,7 +48,9 @@ import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionUiState
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.SummaryCard
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
+import me.saket.telephoto.zoomable.rememberZoomableImageState
 import org.koin.androidx.compose.koinViewModel
+import kotlin.math.roundToInt
 
 /**
  * Displays the selected/shared photo (Telephoto + Coil 3 zoom/pan/subsampling) and overlays the
@@ -75,6 +87,14 @@ fun ViewerScreen(
 	val loaded = state as? InspectionUiState.Loaded
 	val overlay = loaded?.let { reportOverlayFor(it.result.summary) }
 
+	// While the photo is zoomed in (inspecting), slide the summary card down to a peek so it's out
+	// of the way; bring it back when the photo returns to its fit/unzoomed state.
+	val zoomState = rememberZoomableImageState()
+	val peeking by remember {
+		derivedStateOf { (zoomState.zoomableState.zoomFraction ?: 0f) > 0.02f }
+	}
+	val peekProgress by animateFloatAsState(if (peeking) 1f else 0f, label = "summaryPeek")
+
 	Scaffold(
 		topBar = {
 			TopAppBar(
@@ -100,16 +120,19 @@ fun ViewerScreen(
 		},
 	) { innerPadding ->
 		Box(
+			// The photo fills the screen edge-to-edge (under the system bars); only the chrome —
+			// the top bar (via Scaffold) and the summary card (via navigationBarsPadding) — is inset.
 			modifier = Modifier
 				.fillMaxSize()
 				.background(MaterialTheme.colorScheme.surfaceContainerHigh)
-				.padding(innerPadding),
+				.consumeWindowInsets(innerPadding),
 			contentAlignment = Alignment.Center,
 		) {
 			if (imageUri != null) {
 				ZoomableAsyncImage(
 					model = imageUri,
 					contentDescription = stringResource(R.string.selected_photo),
+					state = zoomState,
 					modifier = Modifier.fillMaxSize(),
 				)
 			} else {
@@ -122,6 +145,7 @@ fun ViewerScreen(
 			InspectionOverlay(
 				state = state,
 				onOpenDetails = onOpenDetails,
+				peekFraction = { peekProgress },
 				modifier = Modifier
 					.align(Alignment.BottomCenter)
 					.navigationBarsPadding()
@@ -136,16 +160,29 @@ fun ViewerScreen(
 private fun InspectionOverlay(
 	state: InspectionUiState,
 	onOpenDetails: (() -> Unit)?,
+	peekFraction: () -> Float,
 	modifier: Modifier = Modifier,
 ) {
 	when (state) {
 		InspectionUiState.Idle -> Unit
 		InspectionUiState.Loading -> CircularProgressIndicator(modifier = modifier)
-		is InspectionUiState.Loaded -> SummaryCard(
-			summary = state.result.summary,
-			onViewDetails = onOpenDetails?.takeIf { state.result.manifest != null },
-			modifier = modifier,
-		)
+		is InspectionUiState.Loaded -> {
+			// Slide the card down by (its height − a small peek) as the photo zooms in. The peek
+			// fraction is read inside offset { } (layout phase) so zoom changes don't recompose.
+			val density = LocalDensity.current
+			val peekVisiblePx = with(density) { 28.dp.toPx() }
+			var cardHeight by remember { mutableIntStateOf(0) }
+			SummaryCard(
+				summary = state.result.summary,
+				onViewDetails = onOpenDetails?.takeIf { state.result.manifest != null },
+				modifier = modifier
+					.onSizeChanged { cardHeight = it.height }
+					.offset {
+						val hideBy = (cardHeight - peekVisiblePx).coerceAtLeast(0f)
+						IntOffset(x = 0, y = (peekFraction() * hideBy).roundToInt())
+					},
+			)
+		}
 
 		is InspectionUiState.Error -> Text(
 			text = stringResource(R.string.inspect_error, state.message),

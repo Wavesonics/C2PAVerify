@@ -38,6 +38,7 @@
     <string name="section_assertions">Assertions (%1$d)</string>
     <string name="section_ingredients">Ingredients (%1$d)</string>
     <string name="section_validation">Validation (%1$d)</string>
+    <string name="validation_all_passed">Validation · all %1$d checks passed</string>
     <string name="section_raw_json">Raw manifest JSON</string>
     <string name="label_title">Title</string>
     <string name="label_format">Format</string>
