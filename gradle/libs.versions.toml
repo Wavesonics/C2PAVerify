@@ -15,7 +15,7 @@ serializationJson = "1.8.1"
 koin = "4.1.0"
 ktor = "3.2.2"
 coil = "3.2.0"
-telephoto = "0.16.0"
+telephoto = "0.19.0"
 napier = "2.7.1"
 datastore = "1.1.7"
 material3Adaptive = "1.1.0"
@@ -43,6 +43,7 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
@@ -76,7 +77,7 @@ ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serializatio
 # Image loading & zoom
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil" }
-telephoto-zoomable-image-coil = { group = "me.saket.telephoto", name = "zoomable-image-coil", version.ref = "telephoto" }
+telephoto-zoomable-image-coil3 = { group = "me.saket.telephoto", name = "zoomable-image-coil3", version.ref = "telephoto" }
 
 # C2PA (Android-only; JitPack)
 c2pa-android = { group = "com.github.contentauth", name = "c2pa-android", version.ref = "c2paAndroid" }

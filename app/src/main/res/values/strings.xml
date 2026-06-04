@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">C2PAViewer</string>
+
+    <!-- Picker / empty state -->
+    <string name="empty_title">Inspect Content Credentials</string>
+    <string name="empty_body">Pick a photo to check for C2PA / Content Authenticity data — who made it, whether it has been edited or AI-generated, and whether the signer is trusted. You can also share a photo to this app from anywhere.</string>
+    <string name="pick_photo">Pick a photo</string>
+
+    <!-- Viewer -->
+    <string name="viewer_title">Inspect photo</string>
+    <string name="back">Back</string>
+    <string name="selected_photo">Selected photo</string>
+    <string name="no_image">No photo selected</string>
 </resources>

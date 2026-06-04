@@ -1,47 +1,49 @@
 package com.darkrockstudios.apps.c2paviewer
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.IntentCompat
+import com.darkrockstudios.apps.c2paviewer.ui.C2paViewerApp
 import com.darkrockstudios.apps.c2paviewer.ui.theme.C2PAViewerTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
+
+	/** The latest image shared into the app via ACTION_SEND(_MULTIPLE). */
+	private val sharedImage = MutableStateFlow<String?>(null)
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
+		handleShareIntent(intent)
 		setContent {
 			C2PAViewerTheme {
-				Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-					Greeting(
-						name = "Android",
-						modifier = Modifier.padding(innerPadding)
-					)
-				}
+				C2paViewerApp(sharedImage = sharedImage)
 			}
 		}
 	}
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-	Text(
-		text = "Hello $name!",
-		modifier = modifier
-	)
-}
+	override fun onNewIntent(intent: Intent) {
+		super.onNewIntent(intent)
+		setIntent(intent)
+		handleShareIntent(intent)
+	}
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-	C2PAViewerTheme {
-		Greeting("Android")
+	private fun handleShareIntent(intent: Intent?) {
+		if (intent == null || intent.type?.startsWith("image/") != true) return
+		val uri: Uri? = when (intent.action) {
+			Intent.ACTION_SEND ->
+				IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+			// Multi-image share: inspect the first for now (a pager is a later enhancement).
+			Intent.ACTION_SEND_MULTIPLE ->
+				IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+					?.firstOrNull()
+			else -> null
+		}
+		if (uri != null) sharedImage.value = uri.toString()
 	}
 }

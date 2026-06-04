@@ -68,6 +68,7 @@ dependencies {
 	implementation(platform(libs.androidx.compose.bom))
 	implementation(libs.androidx.activity.compose)
 	implementation(libs.androidx.compose.material3)
+	implementation(libs.androidx.compose.material.icons.core)
 	implementation(libs.androidx.compose.ui)
 	implementation(libs.androidx.compose.ui.graphics)
 	implementation(libs.androidx.compose.ui.tooling.preview)
@@ -100,7 +101,7 @@ dependencies {
 	// Image loading & zoom
 	implementation(libs.coil.compose)
 	implementation(libs.coil.network.ktor3)
-	implementation(libs.telephoto.zoomable.image.coil)
+	implementation(libs.telephoto.zoomable.image.coil3)
 
 	// C2PA reading/verification (Android-only native lib via JitPack; needs JNA aar).
 	// c2pa-android transitively pulls the plain jna *jar*; on Android we need the *aar* (which
