@@ -101,8 +101,13 @@ fun DeepDiveScreen(
 		val result = (state as? InspectionUiState.Loaded)?.result
 		val manifest = result?.manifest
 		if (manifest == null) {
-			Column(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {
-				Text(stringResource(R.string.status_no_manifest_body))
+			val message = (state as? InspectionUiState.Error)
+				?.let { stringResource(R.string.inspect_error, it.message) }
+				?: stringResource(R.string.status_no_manifest_body)
+			Column(Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
+				Card(Modifier.fillMaxWidth()) {
+					Text(message, Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium)
+				}
 			}
 			return@Scaffold
 		}
@@ -120,6 +125,7 @@ fun DeepDiveScreen(
 				SignatureSection(
 					manifest = manifest,
 					status = result.summary.status,
+					hasOverride = result.signerHasOverride,
 					onAllow = { viewModel.setSignerRule(TrustRule.ALLOW) },
 					onDeny = { viewModel.setSignerRule(TrustRule.DENY) },
 					onClear = { viewModel.setSignerRule(null) },
@@ -150,6 +156,7 @@ private fun ManifestSection(manifest: C2paManifestData) {
 private fun SignatureSection(
 	manifest: C2paManifestData,
 	status: OverallStatus,
+	hasOverride: Boolean,
 	onAllow: () -> Unit,
 	onDeny: () -> Unit,
 	onClear: () -> Unit,
@@ -169,12 +176,24 @@ private fun SignatureSection(
 		KeyValue(stringResource(R.string.label_signed_time), sig?.time)
 		KeyValue(stringResource(R.string.label_trust), trust)
 		if (sig != null) {
-			// FlowRow so the actions wrap onto another line in a narrow (tablet) detail pane
-			// instead of overflowing — a plain Row clipped "Clear override" and inflated the card.
-			FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-				TextButton(onClick = onAllow) { Text(stringResource(R.string.action_trust_signer)) }
-				TextButton(onClick = onDeny) { Text(stringResource(R.string.action_distrust_signer)) }
-				TextButton(onClick = onClear) { Text(stringResource(R.string.action_clear_override)) }
+			// Only show the actions that would change something: "Trust" when not already trusted,
+			// "Don't trust" when trusted, and "Clear override" only when a user rule exists.
+			val showTrust = status == OverallStatus.SIGNED_UNTRUSTED
+			val showDeny = status == OverallStatus.SIGNED_TRUSTED
+			if (showTrust || showDeny || hasOverride) {
+				// FlowRow so the actions wrap onto another line in a narrow (tablet) detail pane
+				// instead of overflowing — a plain Row clipped "Clear override" and inflated the card.
+				FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+					if (showTrust) {
+						TextButton(onClick = onAllow) { Text(stringResource(R.string.action_trust_signer)) }
+					}
+					if (showDeny) {
+						TextButton(onClick = onDeny) { Text(stringResource(R.string.action_distrust_signer)) }
+					}
+					if (hasOverride) {
+						TextButton(onClick = onClear) { Text(stringResource(R.string.action_clear_override)) }
+					}
+				}
 			}
 		}
 	}

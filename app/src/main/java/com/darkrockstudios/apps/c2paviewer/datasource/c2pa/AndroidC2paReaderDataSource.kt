@@ -99,11 +99,12 @@ class AndroidC2paReaderDataSource : C2paReaderDataSource {
 }
 
 /**
- * Best-effort detection of the "asset has no embedded manifest" case, which the native layer
- * surfaces as a generic [C2PAError.Api]. Matched leniently; refined against real device output.
+ * Best-effort detection of the "asset has no embedded manifest" case. The native layer surfaces it
+ * as a [C2PAError] whose message mentions a missing manifest/JUMBF (the exact subtype varies, e.g.
+ * `ManifestNotFound: no JUMBF data found`), so match on the message text of any subtype.
  */
 private fun C2PAError.indicatesNoManifest(): Boolean {
-	val raw = (this as? C2PAError.Api)?.message?.lowercase() ?: return false
+	val raw = message?.lowercase() ?: return false
 	val compact = raw.replace(" ", "").replace("_", "")
 	return listOf(
 		"manifestnotfound",

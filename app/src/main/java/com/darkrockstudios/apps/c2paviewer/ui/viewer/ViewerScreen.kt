@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -181,11 +184,19 @@ private fun InspectionOverlay(
 			)
 		}
 
-		is InspectionUiState.Error -> Text(
-			text = stringResource(R.string.inspect_error, state.message),
-			color = MaterialTheme.colorScheme.error,
-			modifier = modifier,
-		)
+		is InspectionUiState.Error -> Card(
+			modifier = modifier.fillMaxWidth(),
+			colors = CardDefaults.cardColors(
+				containerColor = MaterialTheme.colorScheme.errorContainer,
+				contentColor = MaterialTheme.colorScheme.onErrorContainer,
+			),
+		) {
+			Text(
+				text = stringResource(R.string.inspect_error, state.message),
+				modifier = Modifier.padding(16.dp),
+				style = MaterialTheme.typography.bodyMedium,
+			)
+		}
 	}
 }
 

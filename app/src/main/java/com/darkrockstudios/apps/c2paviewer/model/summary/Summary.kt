@@ -40,4 +40,6 @@ data class C2paSummary(
 data class InspectionResult(
 	val summary: C2paSummary,
 	val manifest: C2paManifestData?,
+	/** Whether the user has an explicit allow/deny rule for this signer. */
+	val signerHasOverride: Boolean = false,
 )

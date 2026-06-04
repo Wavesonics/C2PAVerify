@@ -3,6 +3,7 @@ package com.darkrockstudios.apps.c2paviewer.usecase.inspect
 import com.darkrockstudios.apps.c2paviewer.model.summary.InspectionResult
 import com.darkrockstudios.apps.c2paviewer.model.summary.SummaryFactory
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustLevel
+import com.darkrockstudios.apps.c2paviewer.model.trust.authorityKeyOf
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestRepository
 import com.darkrockstudios.apps.c2paviewer.repository.ImageRepository
 import com.darkrockstudios.apps.c2paviewer.repository.TrustListRepository
@@ -34,9 +35,13 @@ class InspectPhotoUseCase(
 
 			is C2paManifestRepository.ManifestResult.Present -> {
 				val level = trustEvaluationService.evaluate(result.data)
+				val signature = result.data.activeManifest?.signature
+				val key = authorityKeyOf(signature?.issuer, signature?.certSerialNumber)
+				val hasOverride = key != null && userTrustRepository.ruleFor(key) != null
 				InspectionResult(
 					summary = SummaryFactory.buildSummary(result.data, level),
 					manifest = result.data,
+					signerHasOverride = hasOverride,
 				)
 			}
 		}
