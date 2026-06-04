@@ -8,6 +8,3 @@ object Landing
 
 @Serializable
 object Viewer
-
-@Serializable
-object DeepDive

@@ -10,13 +10,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.darkrockstudios.apps.c2paviewer.ui.deepdive.DeepDiveScreen
+import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionScaffold
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
-import com.darkrockstudios.apps.c2paviewer.ui.navigation.DeepDive
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Landing
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Viewer
 import com.darkrockstudios.apps.c2paviewer.ui.picker.PickerScreen
-import com.darkrockstudios.apps.c2paviewer.ui.viewer.ViewerScreen
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.androidx.compose.koinViewModel
 
@@ -48,17 +46,10 @@ fun C2paViewerApp(sharedImage: StateFlow<String?>) {
 			)
 		}
 		composable<Viewer> {
-			ViewerScreen(
+			InspectionScaffold(
 				imageUri = currentImage,
 				viewModel = inspectionViewModel,
-				onBack = { navController.popBackStack() },
-				onOpenDetails = { navController.navigate(DeepDive) },
-			)
-		}
-		composable<DeepDive> {
-			DeepDiveScreen(
-				viewModel = inspectionViewModel,
-				onBack = { navController.popBackStack() },
+				onExit = { navController.popBackStack() },
 			)
 		}
 	}
