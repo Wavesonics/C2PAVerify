@@ -2,9 +2,7 @@ package com.darkrockstudios.apps.c2paviewer.ui.viewer
 
 import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -119,13 +117,12 @@ fun ViewerScreen(
 			)
 		},
 	) { innerPadding ->
+		// innerPadding is intentionally not applied: the photo fills the screen edge-to-edge (under
+		// the system bars). The chrome stays clear of the bars on its own — the top bar via the
+		// Scaffold, and the summary card via navigationBarsPadding() below (which is why we must NOT
+		// consume the nav-bar inset here, or the card would drop onto the gesture bar).
 		Box(
-			// The photo fills the screen edge-to-edge (under the system bars); only the chrome —
-			// the top bar (via Scaffold) and the summary card (via navigationBarsPadding) — is inset.
-			modifier = Modifier
-				.fillMaxSize()
-				.background(MaterialTheme.colorScheme.surfaceContainerHigh)
-				.consumeWindowInsets(innerPadding),
+			modifier = Modifier.fillMaxSize(),
 			contentAlignment = Alignment.Center,
 		) {
 			if (imageUri != null) {
@@ -149,7 +146,7 @@ fun ViewerScreen(
 				modifier = Modifier
 					.align(Alignment.BottomCenter)
 					.navigationBarsPadding()
-					.padding(16.dp)
+					.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
 					.widthIn(max = 520.dp),
 			)
 		}
