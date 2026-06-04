@@ -2,6 +2,7 @@ package com.darkrockstudios.apps.c2paviewer.datasource.c2pa
 
 import androidx.test.platform.app.InstrumentationRegistry
 import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustMaterial
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.io.File
@@ -62,5 +63,43 @@ class C2paReaderCaptureTest {
 		File(outDir, "_summary.txt").writeText(summary.toString())
 		println("C2PA capture summary:\n$summary")
 		println("C2PA capture written to: ${outDir.absolutePath}")
+	}
+
+	/**
+	 * Reads the conformant samples WITH the bundled official trust list configured, so we can
+	 * confirm the reader reports signingCredential.trusted for a real trusted signer.
+	 */
+	@Test
+	fun captureWithTrustList() = runBlocking {
+		val testCtx = InstrumentationRegistry.getInstrumentation().context
+		val appCtx = InstrumentationRegistry.getInstrumentation().targetContext
+		val outDir = File(appCtx.getExternalFilesDir(null), "c2pa-capture-trust").apply { mkdirs() }
+
+		val anchorsPem = appCtx.assets.open("trust/c2pa-trust-anchors.pem")
+			.use { it.readBytes().decodeToString() }
+		val trust = TrustMaterial(trustAnchorsPem = anchorsPem)
+
+		val summary = StringBuilder()
+		listOf("conformant-a.jpg", "conformant-b.jpg", "valid-C.jpg").forEach { asset ->
+			val bytes = testCtx.assets.open("c2pa/$asset").use { it.readBytes() }
+			val base = asset.removeSuffix(".jpg")
+			runCatching { dataSource.read(ImageSource.Bytes(bytes, "image/jpeg"), trust) }
+				.onSuccess { read ->
+					when (read) {
+						is C2paRawRead.NoManifest -> summary.appendLine("$asset -> NoManifest")
+						is C2paRawRead.Manifest -> {
+							File(outDir, "$base.trust.json").writeText(read.manifestJson)
+							val state = Regex("\"validation_state\"\\s*:\\s*\"(\\w+)\"")
+								.find(read.manifestJson)?.groupValues?.get(1)
+							val trusted = read.manifestJson.contains("signingCredential.trusted")
+							val untrusted = read.manifestJson.contains("signingCredential.untrusted")
+							summary.appendLine("$asset -> state=$state trusted=$trusted untrusted=$untrusted")
+						}
+					}
+				}
+				.onFailure { summary.appendLine("$asset -> ERROR ${it.message}") }
+		}
+		File(outDir, "_trust_summary.txt").writeText(summary.toString())
+		println("C2PA trust capture:\n$summary")
 	}
 }

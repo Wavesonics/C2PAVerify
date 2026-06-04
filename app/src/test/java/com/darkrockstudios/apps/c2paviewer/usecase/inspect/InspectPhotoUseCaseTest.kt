@@ -4,9 +4,13 @@ import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paRawRead
 import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
 import com.darkrockstudios.apps.c2paviewer.model.summary.OverallStatus
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustMaterial
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestParser
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestRepository
 import com.darkrockstudios.apps.c2paviewer.repository.ImageRepository
+import com.darkrockstudios.apps.c2paviewer.repository.TrustListRepository
+import com.darkrockstudios.apps.c2paviewer.repository.UserTrustRepository
+import com.darkrockstudios.apps.c2paviewer.service.TrustEvaluationService
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -31,12 +35,23 @@ class InspectPhotoUseCaseTest {
 
 	private fun useCaseReturning(raw: C2paRawRead): InspectPhotoUseCase {
 		val reader = object : C2paReaderDataSource {
-			override suspend fun read(image: ImageSource): C2paRawRead = raw
+			override suspend fun read(image: ImageSource, trust: TrustMaterial?): C2paRawRead = raw
 		}
 		val imageRepo = mockk<ImageRepository> {
 			coEvery { load(any()) } returns ImageSource.Bytes(ByteArray(0), "image/jpeg")
 		}
-		return InspectPhotoUseCase(imageRepo, C2paManifestRepository(reader, parser))
+		val trustListRepo = mockk<TrustListRepository> {
+			coEvery { current() } returns TrustMaterial("-----BEGIN CERTIFICATE-----\nx\n-----END CERTIFICATE-----")
+		}
+		val userTrust = mockk<UserTrustRepository> {
+			coEvery { ruleFor(any()) } returns null
+		}
+		return InspectPhotoUseCase(
+			imageRepo,
+			C2paManifestRepository(reader, parser),
+			trustListRepo,
+			TrustEvaluationService(userTrust),
+		)
 	}
 
 	@Test

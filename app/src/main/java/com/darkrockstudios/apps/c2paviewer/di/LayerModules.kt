@@ -3,9 +3,13 @@ package com.darkrockstudios.apps.c2paviewer.di
 import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.AndroidC2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.image.ImageBytesDataSource
+import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListAssetDataSource
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestParser
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestRepository
 import com.darkrockstudios.apps.c2paviewer.repository.ImageRepository
+import com.darkrockstudios.apps.c2paviewer.repository.TrustListRepository
+import com.darkrockstudios.apps.c2paviewer.repository.UserTrustRepository
+import com.darkrockstudios.apps.c2paviewer.service.TrustEvaluationService
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import com.darkrockstudios.apps.c2paviewer.usecase.inspect.InspectPhotoUseCase
 import org.koin.android.ext.koin.androidContext
@@ -28,16 +32,20 @@ val dataSourceModule = module {
 	factoryOf(::AndroidC2paReaderDataSource) bind C2paReaderDataSource::class
 	factory { C2paManifestParser(get()) }
 	factory { ImageBytesDataSource(androidContext()) }
+	factory { TrustListAssetDataSource(androidContext()) }
 }
 
 // LAYER 2 — repositories (stateful → single)
 val repositoryModule = module {
 	singleOf(::C2paManifestRepository)
 	singleOf(::ImageRepository)
+	singleOf(::TrustListRepository)
+	singleOf(::UserTrustRepository)
 }
 
 // LAYER 3 — services (stateful → single)
 val serviceModule = module {
+	singleOf(::TrustEvaluationService)
 }
 
 // LAYER 4 — use cases (stateless → factory)

@@ -1,0 +1,42 @@
+package com.darkrockstudios.apps.c2paviewer.repository
+
+import com.darkrockstudios.apps.c2paviewer.datasource.db.dao.UserTrustDao
+import com.darkrockstudios.apps.c2paviewer.datasource.db.entity.UserTrustRuleEntity
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustRule
+import com.darkrockstudios.apps.c2paviewer.model.trust.UserTrustRule
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+
+/**
+ * User-managed allow/deny rules for signing authorities, persisted in Room. Keeps `model/`
+ * Room-free by mapping entities here.
+ */
+class UserTrustRepository(private val dao: UserTrustDao) {
+
+	fun observeRules(): Flow<List<UserTrustRule>> =
+		dao.observeRules().map { rows -> rows.map { it.toDomain() } }
+
+	suspend fun ruleFor(authorityKey: String): UserTrustRule? =
+		dao.observeRule(authorityKey).first()?.toDomain()
+
+	suspend fun setRule(rule: UserTrustRule) = dao.upsert(rule.toEntity())
+
+	suspend fun clear(authorityKey: String) = dao.delete(authorityKey)
+
+	private fun UserTrustRuleEntity.toDomain() = UserTrustRule(
+		authorityKey = authorityKey,
+		displayName = displayName,
+		rule = TrustRule.valueOf(rule),
+		createdAt = createdAt,
+		note = note,
+	)
+
+	private fun UserTrustRule.toEntity() = UserTrustRuleEntity(
+		authorityKey = authorityKey,
+		displayName = displayName,
+		rule = rule.name,
+		createdAt = createdAt,
+		note = note,
+	)
+}

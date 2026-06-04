@@ -4,6 +4,7 @@ import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paRawRead
 import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.C2paManifestData
 import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustMaterial
 
 /**
  * Reads and parses the C2PA manifest store for an image. Combines the [C2paReaderDataSource]
@@ -21,8 +22,8 @@ class C2paManifestRepository(
 		data class Present(val data: C2paManifestData) : ManifestResult
 	}
 
-	suspend fun inspect(image: ImageSource): ManifestResult =
-		when (val raw = reader.read(image)) {
+	suspend fun inspect(image: ImageSource, trust: TrustMaterial? = null): ManifestResult =
+		when (val raw = reader.read(image, trust)) {
 			is C2paRawRead.NoManifest -> ManifestResult.NoManifest
 			is C2paRawRead.Manifest -> ManifestResult.Present(
 				parser.parse(raw.manifestJson, raw.detailedJson),

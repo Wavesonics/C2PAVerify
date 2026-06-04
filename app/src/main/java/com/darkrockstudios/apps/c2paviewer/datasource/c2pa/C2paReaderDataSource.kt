@@ -1,6 +1,7 @@
 package com.darkrockstudios.apps.c2paviewer.datasource.c2pa
 
 import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustMaterial
 
 /**
  * The KMP seam around the C2PA reader. Returns the reader's raw outputs as plain strings + cert
@@ -11,11 +12,13 @@ import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
  */
 interface C2paReaderDataSource {
 	/**
-	 * Reads C2PA data from [image]. Returns [C2paRawRead.NoManifest] when the asset has no
-	 * embedded manifest, [C2paRawRead.Manifest] when one is present (regardless of validity), or
-	 * throws [C2paReadException] on an unexpected failure.
+	 * Reads C2PA data from [image]. When [trust] is provided, the reader is configured to validate
+	 * the signer against that trust material (so the result carries `signingCredential.trusted` /
+	 * `.untrusted`). Returns [C2paRawRead.NoManifest] when the asset has no embedded manifest,
+	 * [C2paRawRead.Manifest] when one is present (regardless of validity), or throws
+	 * [C2paReadException] on an unexpected failure.
 	 */
-	suspend fun read(image: ImageSource): C2paRawRead
+	suspend fun read(image: ImageSource, trust: TrustMaterial? = null): C2paRawRead
 }
 
 /** Raw, unparsed result of a C2PA read. */

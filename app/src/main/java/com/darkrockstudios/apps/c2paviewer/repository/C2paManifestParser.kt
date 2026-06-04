@@ -33,7 +33,7 @@ class C2paManifestParser(private val json: Json) {
 			.orEmpty()
 
 		val validationState = when (root.string("validation_state")?.lowercase()) {
-			"valid" -> ManifestValidationState.VALID
+			"valid", "trusted" -> ManifestValidationState.VALID
 			"invalid" -> ManifestValidationState.INVALID
 			else -> ManifestValidationState.UNKNOWN
 		}
