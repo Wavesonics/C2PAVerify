@@ -5,6 +5,11 @@
     <string name="empty_title">Inspect Content Credentials</string>
     <string name="empty_body">Pick a photo to check for C2PA / Content Authenticity data — who made it, whether it has been edited or AI-generated, and whether the signer is trusted. You can also share a photo to this app from anywhere.</string>
     <string name="pick_photo">Pick a photo</string>
+    <string name="example_section_title">Try an example</string>
+    <string name="example_trusted_title">Trusted photo</string>
+    <string name="example_trusted_subtitle">Signed by a trusted source</string>
+    <string name="example_ai_title">AI-generated</string>
+    <string name="example_ai_subtitle">Flagged as AI-generated content</string>
 
     <!-- Viewer -->
     <string name="viewer_title">Inspect photo</string>

@@ -5,15 +5,20 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,15 +29,51 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.darkrockstudios.apps.c2paviewer.R
 
+/** A bundled sample the user can open to see the app work without picking their own photo. */
+private data class ExampleImage(
+	val assetUri: String,
+	val titleRes: Int,
+	val subtitleRes: Int,
+	val testTag: String,
+)
+
+/** Stable identifiers for the bundled examples, shared with the E2E smoke test. */
+object PickerExamples {
+	const val TRUSTED_ASSET = "file:///android_asset/c2pa/examples/trusted.jpg"
+	const val AI_ASSET = "file:///android_asset/c2pa/examples/ai-generated.jpg"
+	const val TAG_TRUSTED = "example_trusted"
+	const val TAG_AI = "example_ai"
+}
+
+private val exampleImages = listOf(
+	ExampleImage(
+		assetUri = PickerExamples.TRUSTED_ASSET,
+		titleRes = R.string.example_trusted_title,
+		subtitleRes = R.string.example_trusted_subtitle,
+		testTag = PickerExamples.TAG_TRUSTED,
+	),
+	ExampleImage(
+		assetUri = PickerExamples.AI_ASSET,
+		titleRes = R.string.example_ai_title,
+		subtitleRes = R.string.example_ai_subtitle,
+		testTag = PickerExamples.TAG_AI,
+	),
+)
+
 /**
- * Landing screen: an informative empty state plus the Android Photo Picker
- * ([ActivityResultContracts.PickVisualMedia], no storage permission required).
+ * Landing screen: an informative empty state, the Android Photo Picker
+ * ([ActivityResultContracts.PickVisualMedia], no storage permission required), and a couple of
+ * bundled example images so the app can be tried without a C2PA photo on hand.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,6 +141,57 @@ fun PickerScreen(
 				},
 			) {
 				Text(stringResource(R.string.pick_photo))
+			}
+
+			Text(
+				text = stringResource(R.string.example_section_title),
+				style = MaterialTheme.typography.titleMedium,
+				modifier = Modifier
+					.fillMaxWidth()
+					.widthIn(max = 480.dp)
+					.padding(top = 16.dp),
+			)
+			exampleImages.forEach { example ->
+				ExampleCard(
+					example = example,
+					onClick = { onImagePicked(example.assetUri) },
+					modifier = Modifier.widthIn(max = 480.dp),
+				)
+			}
+		}
+	}
+}
+
+@Composable
+private fun ExampleCard(
+	example: ExampleImage,
+	onClick: () -> Unit,
+	modifier: Modifier = Modifier,
+) {
+	Card(
+		onClick = onClick,
+		modifier = modifier.fillMaxWidth().testTag(example.testTag),
+	) {
+		Row(
+			modifier = Modifier.padding(12.dp),
+			verticalAlignment = Alignment.CenterVertically,
+			horizontalArrangement = Arrangement.spacedBy(12.dp),
+		) {
+			AsyncImage(
+				model = example.assetUri,
+				contentDescription = null,
+				contentScale = ContentScale.Crop,
+				modifier = Modifier
+					.size(64.dp)
+					.clip(RoundedCornerShape(8.dp)),
+			)
+			Column(Modifier.weight(1f)) {
+				Text(stringResource(example.titleRes), style = MaterialTheme.typography.bodyLarge)
+				Text(
+					stringResource(example.subtitleRes),
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+				)
 			}
 		}
 	}

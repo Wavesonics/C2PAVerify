@@ -46,14 +46,15 @@ object SummaryFactory {
 	}
 
 	/**
-	 * Flags AI involvement by scanning every assertion's data for `digitalSourceType` values that
-	 * denote algorithmic media (IPTC: `trainedAlgorithmicMedia`, `compositeWithTrainedAlgorithmicMedia`).
+	 * Flags AI involvement from the **asset's own claim** — i.e. the active manifest's
+	 * `digitalSourceType` values that denote algorithmic media (IPTC: `trainedAlgorithmicMedia`,
+	 * `compositeWithTrainedAlgorithmicMedia`). Ingredient/provenance history is deliberately *not*
+	 * scanned: a normal photo that merely incorporated an AI-generated ingredient is not itself
+	 * "AI-generated". That history is still visible in the deep-dive's ingredient list.
 	 */
 	fun detectAi(manifest: C2paManifestData): AiIndicator {
 		val sourceTypes = buildList {
-			manifest.manifests.forEach { m ->
-				m.assertions.forEach { a -> collectDigitalSourceTypes(a.data, this) }
-			}
+			manifest.activeManifest?.assertions?.forEach { a -> collectDigitalSourceTypes(a.data, this) }
 		}.distinct()
 		val isAi = sourceTypes.any { it.lowercase().contains("algorithmicmedia") }
 		return AiIndicator(isAiGenerated = isAi, sourceTypes = sourceTypes)

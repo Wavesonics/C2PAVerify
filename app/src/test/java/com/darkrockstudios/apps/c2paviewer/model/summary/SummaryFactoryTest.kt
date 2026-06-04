@@ -82,4 +82,35 @@ class SummaryFactoryTest {
 		val data = parser.parse(fixture("valid-multi-CAICAI.manifest.json"))
 		assertFalse(SummaryFactory.detectAi(data).isAiGenerated)
 	}
+
+	@Test
+	fun `detectAi ignores AI only in ingredient provenance, not the asset's own claim`() {
+		// Active manifest is a plain capture; only an *ingredient* manifest is AI-generated.
+		// The asset itself is not AI-generated, so the headline flag must stay false.
+		val json = """
+			{
+			  "active_manifest": "active",
+			  "manifests": {
+			    "active": {
+			      "assertions": [
+			        { "label": "c2pa.actions.v2", "data": { "actions": [
+			          { "action": "c2pa.created",
+			            "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture" }
+			        ] } }
+			      ]
+			    },
+			    "ingredient": {
+			      "assertions": [
+			        { "label": "c2pa.actions.v2", "data": { "actions": [
+			          { "action": "c2pa.created",
+			            "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" }
+			        ] } }
+			      ]
+			    }
+			  },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		assertFalse(SummaryFactory.detectAi(parser.parse(json)).isAiGenerated)
+	}
 }
