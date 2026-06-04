@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -17,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,6 +75,13 @@ fun SummaryCard(
 					AssistChip(
 						onClick = {},
 						label = { Text(stringResource(R.string.ai_badge)) },
+						leadingIcon = {
+							Icon(
+								painter = painterResource(R.drawable.ic_auto_awesome),
+								contentDescription = null,
+								modifier = Modifier.size(AssistChipDefaults.IconSize),
+							)
+						},
 					)
 				}
 				if (onViewDetails != null) {
