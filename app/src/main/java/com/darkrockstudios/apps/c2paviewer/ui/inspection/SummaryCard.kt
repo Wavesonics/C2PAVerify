@@ -12,6 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +29,11 @@ import com.darkrockstudios.apps.c2paviewer.model.summary.OverallStatus
  * AI-generated chip when applicable.
  */
 @Composable
-fun SummaryCard(summary: C2paSummary, modifier: Modifier = Modifier) {
+fun SummaryCard(
+	summary: C2paSummary,
+	modifier: Modifier = Modifier,
+	onViewDetails: (() -> Unit)? = null,
+) {
 	Card(modifier = modifier.fillMaxWidth()) {
 		Column(
 			modifier = Modifier.padding(16.dp),
@@ -68,6 +73,11 @@ fun SummaryCard(summary: C2paSummary, modifier: Modifier = Modifier) {
 						onClick = {},
 						label = { Text(stringResource(R.string.ai_badge)) },
 					)
+				}
+				if (onViewDetails != null) {
+					TextButton(onClick = onViewDetails) {
+						Text(stringResource(R.string.view_details))
+					}
 				}
 			}
 		}

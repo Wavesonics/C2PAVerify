@@ -38,6 +38,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ViewerScreen(
 	imageUri: String?,
 	onBack: () -> Unit,
+	onOpenDetails: () -> Unit,
 	viewModel: InspectionViewModel = koinViewModel(),
 ) {
 	LaunchedEffect(imageUri) {
@@ -81,6 +82,7 @@ fun ViewerScreen(
 
 			InspectionOverlay(
 				state = state,
+				onOpenDetails = onOpenDetails,
 				modifier = Modifier
 					.align(Alignment.BottomCenter)
 					.navigationBarsPadding()
@@ -91,11 +93,20 @@ fun ViewerScreen(
 }
 
 @Composable
-private fun InspectionOverlay(state: InspectionUiState, modifier: Modifier = Modifier) {
+private fun InspectionOverlay(
+	state: InspectionUiState,
+	onOpenDetails: () -> Unit,
+	modifier: Modifier = Modifier,
+) {
 	when (state) {
 		InspectionUiState.Idle -> Unit
 		InspectionUiState.Loading -> CircularProgressIndicator(modifier = modifier)
-		is InspectionUiState.Loaded -> SummaryCard(summary = state.result.summary, modifier = modifier)
+		is InspectionUiState.Loaded -> SummaryCard(
+			summary = state.result.summary,
+			onViewDetails = if (state.result.manifest != null) onOpenDetails else null,
+			modifier = modifier,
+		)
+
 		is InspectionUiState.Error -> Text(
 			text = stringResource(R.string.inspect_error, state.message),
 			color = MaterialTheme.colorScheme.error,

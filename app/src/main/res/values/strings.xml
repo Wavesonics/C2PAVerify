@@ -24,4 +24,31 @@
     <string name="summary_generator">Created with %1$s</string>
     <string name="summary_signed_time">Signed %1$s</string>
     <string name="ai_badge">AI-generated</string>
+    <string name="view_details">View details</string>
+
+    <!-- Deep dive -->
+    <string name="details_title">Content Credentials</string>
+    <string name="section_manifest">Manifest</string>
+    <string name="section_signature">Signature &amp; certificate</string>
+    <string name="section_assertions">Assertions (%1$d)</string>
+    <string name="section_ingredients">Ingredients (%1$d)</string>
+    <string name="section_validation">Validation (%1$d)</string>
+    <string name="section_raw_json">Raw manifest JSON</string>
+    <string name="label_title">Title</string>
+    <string name="label_format">Format</string>
+    <string name="label_generator">Claim generator</string>
+    <string name="label_instance">Instance ID</string>
+    <string name="label_issuer">Issuer</string>
+    <string name="label_common_name">Common name</string>
+    <string name="label_algorithm">Algorithm</string>
+    <string name="label_serial">Serial number</string>
+    <string name="label_signed_time">Signed</string>
+    <string name="label_trust">Trust</string>
+    <string name="trust_trusted">Trusted</string>
+    <string name="trust_untrusted">Untrusted</string>
+    <string name="trust_unknown">Unknown</string>
+    <string name="ingredient_relationship">Relationship: %1$s</string>
+    <string name="empty_section">None</string>
+    <string name="show">Show</string>
+    <string name="hide">Hide</string>
 </resources>
