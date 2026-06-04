@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.DisableSelection
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
@@ -105,12 +107,15 @@ fun DeepDiveScreen(
 			return@Scaffold
 		}
 
-		LazyColumn(
-			modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
-			contentPadding = innerPadding + PaddingValues(16.dp),
-			verticalArrangement = Arrangement.spacedBy(12.dp),
-		) {
-			item { ManifestSection(manifest) }
+		// Wrap the whole detail in a SelectionContainer so users can select/copy the real data
+		// (signer, serial, hashes, JSON…). Pure labels are excluded via DisableSelection below.
+		SelectionContainer(Modifier.fillMaxSize()) {
+			LazyColumn(
+				modifier = Modifier.fillMaxSize().consumeWindowInsets(innerPadding),
+				contentPadding = innerPadding + PaddingValues(16.dp),
+				verticalArrangement = Arrangement.spacedBy(12.dp),
+			) {
+				item { ManifestSection(manifest) }
 			item {
 				SignatureSection(
 					manifest = manifest,
@@ -124,6 +129,7 @@ fun DeepDiveScreen(
 			item { IngredientsSection(manifest) }
 			item { ValidationSection(manifest) }
 			item { RawJsonSection(manifest) }
+			}
 		}
 	}
 }
@@ -370,13 +376,14 @@ private fun SectionHeader(
 		verticalAlignment = Alignment.CenterVertically,
 	) {
 		Row(
+			modifier = Modifier.weight(1f),
 			horizontalArrangement = Arrangement.spacedBy(8.dp),
 			verticalAlignment = Alignment.CenterVertically,
 		) {
 			if (icon != null) {
 				Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = iconTint)
 			}
-			Text(title, style = MaterialTheme.typography.titleMedium)
+			DisableSelection { Text(title, style = MaterialTheme.typography.titleMedium) }
 		}
 		trailing()
 	}
@@ -417,7 +424,9 @@ private fun ExpandableCard(
 private fun KeyValue(label: String, value: String?) {
 	if (value.isNullOrBlank()) return
 	Column {
-		Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+		DisableSelection {
+			Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+		}
 		Text(value, style = MaterialTheme.typography.bodyMedium)
 	}
 }
