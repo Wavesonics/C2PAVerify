@@ -23,12 +23,22 @@ import com.darkrockstudios.apps.c2paviewer.ui.viewer.ViewerScreen
 /** Max width of the Content Credentials panel on a (non-folding) large screen. */
 private val DetailPaneWidth = 300.dp
 
+/** Window width buckets (derived from the WindowManager-backed [WindowSizeClass]). */
+private enum class WidthBucket { COMPACT, MEDIUM, EXPANDED }
+
+private fun WindowSizeClass.widthBucket(): WidthBucket = when {
+	isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> WidthBucket.EXPANDED
+	isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> WidthBucket.MEDIUM
+	else -> WidthBucket.COMPACT
+}
+
 /**
- * Adaptive container for a single inspection. The photo is always the primary surface:
- *  - **Foldable, open** (separating vertical hinge): split exactly at the crease (~50/50), photo
- *    left, credentials right.
- *  - **Expanded large screen** (tablet): photo fills the space, credentials pinned to [DetailPaneWidth].
- *  - **Compact** (phone): single pane; "View details" shows the deep-dive, back collapses it.
+ * Adaptive container for a single inspection. The photo is always the primary surface. Layout is
+ * driven by Jetpack WindowManager via [currentWindowAdaptiveInfo] — width size-class buckets plus
+ * fold posture:
+ *  - **Open foldable** (vertical hinge): split exactly at the crease (~50/50), photo left.
+ *  - **Expanded width** (≥840dp): photo fills, Content Credentials pinned to [DetailPaneWidth].
+ *  - **Compact / Medium**: single pane; "View details" shows the deep-dive, back collapses it.
  *
  * Both panes share one [InspectionViewModel].
  */
@@ -39,15 +49,13 @@ fun InspectionScaffold(
 	onExit: () -> Unit,
 ) {
 	val info = currentWindowAdaptiveInfo()
-	// Split at the crease whenever a vertical hinge is present (open foldable), whether the device
-	// is flat or half-folded — a flat-open fold reports the hinge as non-separating.
+	// A vertical hinge means an open foldable (flat or half-open); split at the crease regardless
+	// of width bucket.
 	val verticalHinge = info.windowPosture.hingeList.firstOrNull { it.isVertical }
-	val expanded = info.windowSizeClass
-		.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+	val widthBucket = info.windowSizeClass.widthBucket()
 
 	when {
 		verticalHinge != null -> {
-			// Place the divider exactly on the hinge so each pane occupies one half of the fold.
 			val density = LocalDensity.current
 			val photoWidth = with(density) { verticalHinge.bounds.left.toDp() }
 			val creaseWidth = with(density) { verticalHinge.bounds.width.toDp() }
@@ -58,7 +66,7 @@ fun InspectionScaffold(
 			}
 		}
 
-		expanded -> Row(Modifier.fillMaxSize()) {
+		widthBucket == WidthBucket.EXPANDED -> Row(Modifier.fillMaxSize()) {
 			Box(Modifier.weight(1f).fillMaxHeight()) { Photo(imageUri, viewModel, onExit) }
 			Box(Modifier.width(DetailPaneWidth).fillMaxHeight()) { Credentials(viewModel) }
 		}
