@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +39,7 @@ import com.darkrockstudios.apps.c2paviewer.R
 fun PickerScreen(
 	onImagePicked: (String) -> Unit,
 	onOpenTrust: () -> Unit,
+	onShowOnboarding: () -> Unit,
 ) {
 	val pickMedia = rememberLauncherForActivityResult(
 		ActivityResultContracts.PickVisualMedia(),
@@ -48,6 +50,12 @@ fun PickerScreen(
 			TopAppBar(
 				title = { Text(stringResource(R.string.app_name)) },
 				actions = {
+					IconButton(onClick = onShowOnboarding) {
+						Icon(
+							imageVector = Icons.Filled.Info,
+							contentDescription = stringResource(R.string.onboarding_show),
+						)
+					}
 					IconButton(onClick = onOpenTrust) {
 						Icon(
 							painter = painterResource(R.drawable.ic_shield),

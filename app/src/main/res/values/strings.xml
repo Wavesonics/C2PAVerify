@@ -71,4 +71,21 @@
     <string name="action_trust_signer">Trust this signer</string>
     <string name="action_distrust_signer">Don\'t trust</string>
     <string name="action_clear_override">Clear override</string>
+
+    <!-- Share / export report -->
+    <string name="share_report">Share verification report</string>
+    <string name="share_report_chooser">Share verification report</string>
+    <string name="report_watermark">Verified with C2PAViewer</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_show">How it works</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_done">Get started</string>
+    <string name="onboarding_1_title">See who made a photo</string>
+    <string name="onboarding_1_body">C2PAViewer reads Content Credentials embedded in a photo — the signer, the tool that created it, and when it was signed.</string>
+    <string name="onboarding_2_title">Know if you can trust it</string>
+    <string name="onboarding_2_body">A bold banner tells you at a glance whether the photo is signed and trusted, signed by an unknown party, or tampered with. AI-generated images are flagged.</string>
+    <string name="onboarding_3_title">Pick, share, and verify</string>
+    <string name="onboarding_3_body">Pick a photo or share one to C2PAViewer from any app. Manage which authorities you trust, then export a report with the verdict laid over the image.</string>
 </resources>

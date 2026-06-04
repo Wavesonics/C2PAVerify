@@ -3,6 +3,8 @@ package com.darkrockstudios.apps.c2paviewer.di
 import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.AndroidC2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.image.ImageBytesDataSource
+import com.darkrockstudios.apps.c2paviewer.datasource.report.ReportRendererDataSource
+import com.darkrockstudios.apps.c2paviewer.datasource.settings.PreferencesDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustAnchorParser
 import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListAssetDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListCacheDataSource
@@ -10,12 +12,18 @@ import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListRemoteD
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestParser
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestRepository
 import com.darkrockstudios.apps.c2paviewer.repository.ImageRepository
+import com.darkrockstudios.apps.c2paviewer.repository.ReportRepository
+import com.darkrockstudios.apps.c2paviewer.repository.SettingsRepository
 import com.darkrockstudios.apps.c2paviewer.repository.TrustListRepository
 import com.darkrockstudios.apps.c2paviewer.repository.UserTrustRepository
 import com.darkrockstudios.apps.c2paviewer.service.TrustEvaluationService
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
+import com.darkrockstudios.apps.c2paviewer.ui.onboarding.OnboardingViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.trust.TrustManagementViewModel
 import com.darkrockstudios.apps.c2paviewer.usecase.inspect.InspectPhotoUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.settings.MarkOnboardingSeenUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.settings.ObserveOnboardingSeenUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.share.ShareReportUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ClearAuthorityRuleUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.GetTrustListUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ObserveUserTrustRulesUseCase
@@ -45,12 +53,16 @@ val dataSourceModule = module {
 	factory { TrustListCacheDataSource(androidContext()) }
 	factoryOf(::TrustListRemoteDataSource)
 	factoryOf(::TrustAnchorParser)
+	factory { ReportRendererDataSource(androidContext()) }
+	factory { PreferencesDataSource(androidContext()) }
 }
 
 // LAYER 2 — repositories (stateful → single)
 val repositoryModule = module {
 	singleOf(::C2paManifestRepository)
 	singleOf(::ImageRepository)
+	singleOf(::ReportRepository)
+	singleOf(::SettingsRepository)
 	singleOf(::TrustListRepository)
 	singleOf(::UserTrustRepository)
 }
@@ -63,15 +75,19 @@ val serviceModule = module {
 // LAYER 4 — use cases (stateless → factory)
 val useCaseModule = module {
 	factoryOf(::InspectPhotoUseCase)
+	factoryOf(::ShareReportUseCase)
 	factoryOf(::GetTrustListUseCase)
 	factoryOf(::RefreshTrustListUseCase)
 	factoryOf(::ObserveUserTrustRulesUseCase)
 	factoryOf(::SetAuthorityRuleUseCase)
 	factoryOf(::ClearAuthorityRuleUseCase)
+	factoryOf(::ObserveOnboardingSeenUseCase)
+	factoryOf(::MarkOnboardingSeenUseCase)
 }
 
 // Presentation — ViewModels
 val viewModelModule = module {
 	viewModelOf(::InspectionViewModel)
 	viewModelOf(::TrustManagementViewModel)
+	viewModelOf(::OnboardingViewModel)
 }

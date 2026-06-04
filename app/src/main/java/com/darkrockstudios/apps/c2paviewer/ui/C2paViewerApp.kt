@@ -1,5 +1,6 @@
 package com.darkrockstudios.apps.c2paviewer.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,6 +16,8 @@ import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Landing
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Trust
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Viewer
+import com.darkrockstudios.apps.c2paviewer.ui.onboarding.OnboardingScreen
+import com.darkrockstudios.apps.c2paviewer.ui.onboarding.OnboardingViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.picker.PickerScreen
 import com.darkrockstudios.apps.c2paviewer.ui.trust.TrustManagementScreen
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +32,7 @@ fun C2paViewerApp(sharedImage: StateFlow<String?>) {
 	val navController = rememberNavController()
 	// One inspection VM shared by the viewer and the deep-dive (activity-scoped owner).
 	val inspectionViewModel: InspectionViewModel = koinViewModel()
+	val onboardingViewModel: OnboardingViewModel = koinViewModel()
 	var currentImage by rememberSaveable { mutableStateOf<String?>(null) }
 
 	val shared by sharedImage.collectAsStateWithLifecycle()
@@ -38,25 +42,35 @@ fun C2paViewerApp(sharedImage: StateFlow<String?>) {
 		navController.navigate(Viewer) { launchSingleTop = true }
 	}
 
-	NavHost(navController = navController, startDestination = Landing) {
-		composable<Landing> {
-			PickerScreen(
-				onImagePicked = { uri ->
-					currentImage = uri
-					navController.navigate(Viewer)
-				},
-				onOpenTrust = { navController.navigate(Trust) },
-			)
+	val showOnboarding by onboardingViewModel.showOnboarding.collectAsStateWithLifecycle()
+
+	Box {
+		NavHost(navController = navController, startDestination = Landing) {
+			composable<Landing> {
+				PickerScreen(
+					onImagePicked = { uri ->
+						currentImage = uri
+						navController.navigate(Viewer)
+					},
+					onOpenTrust = { navController.navigate(Trust) },
+					onShowOnboarding = onboardingViewModel::replay,
+				)
+			}
+			composable<Viewer> {
+				InspectionScaffold(
+					imageUri = currentImage,
+					viewModel = inspectionViewModel,
+					onExit = { navController.popBackStack() },
+				)
+			}
+			composable<Trust> {
+				TrustManagementScreen(onBack = { navController.popBackStack() })
+			}
 		}
-		composable<Viewer> {
-			InspectionScaffold(
-				imageUri = currentImage,
-				viewModel = inspectionViewModel,
-				onExit = { navController.popBackStack() },
-			)
-		}
-		composable<Trust> {
-			TrustManagementScreen(onBack = { navController.popBackStack() })
+
+		// One-time intro slideshow, drawn above everything until seen (or while replayed).
+		if (showOnboarding == true) {
+			OnboardingScreen(onFinish = onboardingViewModel::finish)
 		}
 	}
 }
