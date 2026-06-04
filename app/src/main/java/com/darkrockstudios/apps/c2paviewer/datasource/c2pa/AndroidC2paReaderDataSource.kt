@@ -79,7 +79,7 @@ class AndroidC2paReaderDataSource : C2paReaderDataSource {
 			allowedList = trust.allowedListPem,
 			trustConfig = trust.trustConfig,
 		),
-		verify = VerifySettings(verifyTrust = true),
+		verify = VerifySettings(verifyTrust = true, verifyTimestampTrust = true),
 	)
 
 	private fun buildStream(image: ImageSource): Stream = when (image) {

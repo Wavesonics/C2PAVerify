@@ -62,6 +62,10 @@
     <string name="rule_allow">ALLOW</string>
     <string name="rule_deny">DENY</string>
     <string name="remove">Remove</string>
+    <string name="trust_refresh">Refresh trust list</string>
+    <string name="trust_updated">Updated %1$s</string>
+    <string name="trust_bundled">Using bundled snapshot</string>
+    <string name="trust_refresh_failed">Couldn\'t refresh: %1$s</string>
 
     <!-- Deep-dive signer actions -->
     <string name="action_trust_signer">Trust this signer</string>

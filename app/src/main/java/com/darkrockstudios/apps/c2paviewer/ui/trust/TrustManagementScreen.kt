@@ -7,11 +7,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -26,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.text.DateFormat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustAnchorInfo
@@ -45,11 +50,20 @@ fun TrustManagementScreen(
 
 	Scaffold(
 		topBar = {
-			androidx.compose.material3.TopAppBar(
+			TopAppBar(
 				title = { Text(stringResource(R.string.trust_title)) },
 				navigationIcon = {
 					IconButton(onClick = onBack) {
 						Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+					}
+				},
+				actions = {
+					if (state.refreshing) {
+						CircularProgressIndicator(modifier = Modifier.padding(end = 16.dp).size(24.dp))
+					} else {
+						IconButton(onClick = viewModel::refresh) {
+							Icon(Icons.Filled.Refresh, stringResource(R.string.trust_refresh))
+						}
 					}
 				},
 			)
@@ -60,6 +74,25 @@ fun TrustManagementScreen(
 			contentPadding = PaddingValues(16.dp),
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
+			item {
+				val updated = state.lastUpdatedEpochMs
+				Text(
+					text = if (updated != null) {
+						stringResource(R.string.trust_updated, DateFormat.getDateInstance().format(Date(updated)))
+					} else {
+						stringResource(R.string.trust_bundled)
+					},
+					style = MaterialTheme.typography.bodySmall,
+					color = MaterialTheme.colorScheme.onSurfaceVariant,
+				)
+				state.error?.let {
+					Text(
+						stringResource(R.string.trust_refresh_failed, it),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.error,
+					)
+				}
+			}
 			item {
 				Text(
 					stringResource(R.string.trust_your_rules, state.rules.size),

@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Refresh the C2PA trust list from the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".C2paViewerApp"
         android:allowBackup="true"

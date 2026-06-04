@@ -5,6 +5,8 @@ import com.darkrockstudios.apps.c2paviewer.datasource.c2pa.C2paReaderDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.image.ImageBytesDataSource
 import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustAnchorParser
 import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListAssetDataSource
+import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListCacheDataSource
+import com.darkrockstudios.apps.c2paviewer.datasource.trustlist.TrustListRemoteDataSource
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestParser
 import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestRepository
 import com.darkrockstudios.apps.c2paviewer.repository.ImageRepository
@@ -15,8 +17,9 @@ import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.trust.TrustManagementViewModel
 import com.darkrockstudios.apps.c2paviewer.usecase.inspect.InspectPhotoUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ClearAuthorityRuleUseCase
-import com.darkrockstudios.apps.c2paviewer.usecase.trust.GetTrustAnchorsUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.trust.GetTrustListUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.ObserveUserTrustRulesUseCase
+import com.darkrockstudios.apps.c2paviewer.usecase.trust.RefreshTrustListUseCase
 import com.darkrockstudios.apps.c2paviewer.usecase.trust.SetAuthorityRuleUseCase
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
@@ -39,6 +42,8 @@ val dataSourceModule = module {
 	factory { C2paManifestParser(get()) }
 	factory { ImageBytesDataSource(androidContext()) }
 	factory { TrustListAssetDataSource(androidContext()) }
+	factory { TrustListCacheDataSource(androidContext()) }
+	factoryOf(::TrustListRemoteDataSource)
 	factoryOf(::TrustAnchorParser)
 }
 
@@ -58,7 +63,8 @@ val serviceModule = module {
 // LAYER 4 — use cases (stateless → factory)
 val useCaseModule = module {
 	factoryOf(::InspectPhotoUseCase)
-	factoryOf(::GetTrustAnchorsUseCase)
+	factoryOf(::GetTrustListUseCase)
+	factoryOf(::RefreshTrustListUseCase)
 	factoryOf(::ObserveUserTrustRulesUseCase)
 	factoryOf(::SetAuthorityRuleUseCase)
 	factoryOf(::ClearAuthorityRuleUseCase)

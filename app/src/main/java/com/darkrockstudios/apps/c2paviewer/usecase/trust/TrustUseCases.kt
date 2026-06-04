@@ -7,9 +7,21 @@ import com.darkrockstudios.apps.c2paviewer.repository.TrustListRepository
 import com.darkrockstudios.apps.c2paviewer.repository.UserTrustRepository
 import kotlinx.coroutines.flow.Flow
 
-/** The trusted signing CAs in the active trust list. */
-class GetTrustAnchorsUseCase(private val trustList: TrustListRepository) {
-	suspend operator fun invoke(): List<TrustAnchorInfo> = trustList.anchors()
+/** Snapshot of the active trust list for display. */
+data class TrustListView(
+	val anchors: List<TrustAnchorInfo>,
+	val lastUpdatedEpochMs: Long?,
+)
+
+/** The trusted signing CAs in the active trust list, plus when it was last refreshed. */
+class GetTrustListUseCase(private val trustList: TrustListRepository) {
+	suspend operator fun invoke(): TrustListView =
+		TrustListView(trustList.anchors(), trustList.lastUpdatedEpochMs())
+}
+
+/** Fetches the latest official trust list from the network. */
+class RefreshTrustListUseCase(private val trustList: TrustListRepository) {
+	suspend operator fun invoke(): Result<Unit> = trustList.refresh()
 }
 
 /** Observe the user's allow/deny rules. */

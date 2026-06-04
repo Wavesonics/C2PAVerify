@@ -2,9 +2,10 @@ package com.darkrockstudios.apps.c2paviewer.di
 
 import androidx.room.Room
 import com.darkrockstudios.apps.c2paviewer.datasource.db.C2paDatabase
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
-import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
 /**
@@ -30,6 +31,8 @@ val appModule = module {
 		).build()
 	}
 	single { get<C2paDatabase>().userTrustDao() }
+
+	single<HttpClient> { HttpClient(OkHttp) }
 }
 
 /**
