@@ -31,9 +31,17 @@ data class C2paManifestData(
 	val signerTrusted: Boolean
 		get() = validationIssues.any { it.code == CODE_SIGNING_TRUSTED }
 
+	/**
+	 * True when an OCSP response stapled into the signature reported the signer's certificate as
+	 * revoked. ([endsWith] avoids matching the `…ocsp.notRevoked` success code.)
+	 */
+	val signerRevoked: Boolean
+		get() = validationIssues.any { it.code.lowercase().endsWith("ocsp.revoked") }
+
 	companion object {
 		const val CODE_SIGNING_UNTRUSTED = "signingCredential.untrusted"
 		const val CODE_SIGNING_TRUSTED = "signingCredential.trusted"
+		const val CODE_SIGNING_REVOKED = "signingCredential.ocsp.revoked"
 	}
 }
 

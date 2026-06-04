@@ -10,8 +10,9 @@ import com.darkrockstudios.apps.c2paviewer.repository.UserTrustRepository
  * Resolves the [TrustLevel] of a manifest's signer by combining the user's allow/deny list with
  * c2pa's own `signingCredential.*` verdict (which reflects the configured trust list).
  *
- * Precedence: user DENY > user ALLOW > c2pa trust verdict. (Integrity failures are handled
- * separately in `SummaryFactory`, which marks them TAMPERED_INVALID regardless of trust.)
+ * Precedence: user DENY > user ALLOW > revoked certificate > c2pa trust verdict. (Integrity
+ * failures are handled separately in `SummaryFactory`, which marks them TAMPERED_INVALID
+ * regardless of trust.)
  */
 class TrustEvaluationService(private val userTrust: UserTrustRepository) {
 
@@ -24,6 +25,7 @@ class TrustEvaluationService(private val userTrust: UserTrustRepository) {
 			TrustRule.DENY -> TrustLevel.UNTRUSTED
 			TrustRule.ALLOW -> TrustLevel.TRUSTED
 			null -> when {
+				manifest.signerRevoked -> TrustLevel.UNTRUSTED
 				manifest.signerTrusted -> TrustLevel.TRUSTED
 				manifest.signerUntrusted -> TrustLevel.UNTRUSTED
 				else -> TrustLevel.UNKNOWN

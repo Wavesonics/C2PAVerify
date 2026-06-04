@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -20,6 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +49,8 @@ fun SummaryCard(
 	onViewDetails: (() -> Unit)? = null,
 ) {
 	val visuals = statusVisuals(summary.status)
+	var infoChip by remember { mutableStateOf<ChipInfo?>(null) }
+	infoChip?.let { chip -> ChipInfoDialog(chip, onDismiss = { infoChip = null }) }
 	Card(
 		modifier = modifier.fillMaxWidth(),
 		colors = CardDefaults.cardColors(
@@ -88,15 +95,58 @@ fun SummaryCard(
 				) {
 					if (summary.ai.isAiGenerated) {
 						AssistChip(
-							onClick = {},
+							onClick = { infoChip = ChipInfo.AI },
 							label = { Text(stringResource(R.string.ai_badge)) },
 							leadingIcon = {
 								Icon(
-									painter = painterResource(R.drawable.ic_auto_awesome),
+									painter = painterResource(ChipInfo.AI.iconRes),
 									contentDescription = null,
 									modifier = Modifier.size(AssistChipDefaults.IconSize),
 								)
 							},
+						)
+					}
+					if (summary.aiModified.isAiModified) {
+						AssistChip(
+							onClick = { infoChip = ChipInfo.AI_MODIFIED },
+							label = { Text(stringResource(R.string.ai_modified_badge)) },
+							leadingIcon = {
+								Icon(
+									painter = painterResource(ChipInfo.AI_MODIFIED.iconRes),
+									contentDescription = null,
+									modifier = Modifier.size(AssistChipDefaults.IconSize),
+								)
+							},
+						)
+					}
+					if (summary.capture.isCameraCapture) {
+						AssistChip(
+							onClick = { infoChip = ChipInfo.CAPTURE },
+							label = { Text(stringResource(R.string.capture_badge)) },
+							leadingIcon = {
+								Icon(
+									painter = painterResource(ChipInfo.CAPTURE.iconRes),
+									contentDescription = null,
+									modifier = Modifier.size(AssistChipDefaults.IconSize),
+								)
+							},
+						)
+					}
+					if (summary.revoked) {
+						AssistChip(
+							onClick = { infoChip = ChipInfo.REVOKED },
+							label = { Text(stringResource(R.string.revoked_badge)) },
+							leadingIcon = {
+								Icon(
+									painter = painterResource(ChipInfo.REVOKED.iconRes),
+									contentDescription = null,
+									modifier = Modifier.size(AssistChipDefaults.IconSize),
+								)
+							},
+							colors = AssistChipDefaults.assistChipColors(
+								labelColor = MaterialTheme.colorScheme.error,
+								leadingIconContentColor = MaterialTheme.colorScheme.error,
+							),
 						)
 					}
 					if (onViewDetails != null) {
@@ -150,4 +200,25 @@ private fun statusVisuals(status: OverallStatus): StatusVisuals {
 			icon = Icons.Filled.Info,
 		)
 	}
+}
+
+/** The tappable summary chips and the explanation each one shows. */
+private enum class ChipInfo(val iconRes: Int, val titleRes: Int, val bodyRes: Int) {
+	AI(R.drawable.ic_auto_awesome, R.string.ai_badge, R.string.ai_badge_explanation),
+	AI_MODIFIED(R.drawable.ic_auto_fix, R.string.ai_modified_badge, R.string.ai_modified_explanation),
+	CAPTURE(R.drawable.ic_camera, R.string.capture_badge, R.string.capture_badge_explanation),
+	REVOKED(R.drawable.ic_block, R.string.revoked_badge, R.string.revoked_explanation),
+}
+
+@Composable
+private fun ChipInfoDialog(chip: ChipInfo, onDismiss: () -> Unit) {
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		icon = { Icon(painterResource(chip.iconRes), contentDescription = null) },
+		title = { Text(stringResource(chip.titleRes)) },
+		text = { Text(stringResource(chip.bodyRes)) },
+		confirmButton = {
+			TextButton(onClick = onDismiss) { Text(stringResource(R.string.got_it)) }
+		},
+	)
 }

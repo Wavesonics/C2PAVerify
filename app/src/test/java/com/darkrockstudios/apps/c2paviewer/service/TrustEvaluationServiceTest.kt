@@ -45,4 +45,27 @@ class TrustEvaluationServiceTest {
 		val rule = UserTrustRule("k", "C2PA Test Signing Cert", TrustRule.DENY, createdAt = 0)
 		assertEquals(TrustLevel.UNTRUSTED, service(rule).evaluate(untrustedManifest))
 	}
+
+	// Signer reported revoked via a stapled OCSP response.
+	private val revokedManifest by lazy {
+		parser.parse(
+			"""
+			{ "active_manifest":"m1","manifests":{"m1":{"signature_info":{"issuer":"X"}}},
+			  "validation_state":"Valid",
+			  "validation_results":{"activeManifest":{"failure":[
+			    {"code":"signingCredential.ocsp.revoked","explanation":"revoked"}]}} }
+			""".trimIndent(),
+		)
+	}
+
+	@Test
+	fun `revoked certificate with no user rule is UNTRUSTED`() = runTest {
+		assertEquals(TrustLevel.UNTRUSTED, service().evaluate(revokedManifest))
+	}
+
+	@Test
+	fun `user ALLOW still wins over a revoked certificate`() = runTest {
+		val rule = UserTrustRule("k", "X", TrustRule.ALLOW, createdAt = 0)
+		assertEquals(TrustLevel.TRUSTED, service(rule).evaluate(revokedManifest))
+	}
 }

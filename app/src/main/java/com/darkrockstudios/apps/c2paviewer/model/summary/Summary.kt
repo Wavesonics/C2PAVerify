@@ -24,6 +24,25 @@ data class AiIndicator(
 	val sourceTypes: List<String>,
 )
 
+/**
+ * Whether the asset's own claim says real content was modified/composited with AI — IPTC
+ * `compositeWithTrainedAlgorithmicMedia` — as opposed to being wholly AI-generated ([AiIndicator])
+ * or untouched.
+ */
+data class AiModifiedIndicator(
+	val isAiModified: Boolean,
+	val sourceTypes: List<String>,
+)
+
+/**
+ * Whether the asset's own claim says it was captured by a device (camera/scanner) — IPTC
+ * `digitalCapture` or `computationalCapture` — as opposed to being created or edited in software.
+ */
+data class CaptureIndicator(
+	val isCameraCapture: Boolean,
+	val sourceTypes: List<String>,
+)
+
 /** The up-front summary of an inspection. */
 data class C2paSummary(
 	val status: OverallStatus,
@@ -32,6 +51,10 @@ data class C2paSummary(
 	val claimGenerator: String?,
 	val signedTime: String?,
 	val ai: AiIndicator,
+	val aiModified: AiModifiedIndicator = AiModifiedIndicator(isAiModified = false, sourceTypes = emptyList()),
+	val capture: CaptureIndicator = CaptureIndicator(isCameraCapture = false, sourceTypes = emptyList()),
+	/** The signer's certificate was reported revoked (via a stapled OCSP response). */
+	val revoked: Boolean = false,
 ) {
 	val manifestPresent: Boolean get() = status != OverallStatus.NO_MANIFEST
 }

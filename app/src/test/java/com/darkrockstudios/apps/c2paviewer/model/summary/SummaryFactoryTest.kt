@@ -84,6 +84,94 @@ class SummaryFactoryTest {
 	}
 
 	@Test
+	fun `composite-with-AI is AI-modified, not AI-generated`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.edited",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/compositeWithTrainedAlgorithmicMedia" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val data = parser.parse(json)
+		assertFalse(SummaryFactory.detectAi(data).isAiGenerated)
+		assertTrue(SummaryFactory.detectAiModified(data).isAiModified)
+	}
+
+	@Test
+	fun `fully AI-generated is not flagged as AI-modified`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val data = parser.parse(json)
+		assertTrue(SummaryFactory.detectAi(data).isAiGenerated)
+		assertFalse(SummaryFactory.detectAiModified(data).isAiModified)
+	}
+
+	@Test
+	fun `detectCapture flags a digitalCapture camera origin`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val capture = SummaryFactory.detectCapture(parser.parse(json))
+		assertTrue(capture.isCameraCapture)
+	}
+
+	@Test
+	fun `detectCapture is false for an AI-generated image`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		assertFalse(SummaryFactory.detectCapture(parser.parse(json)).isCameraCapture)
+	}
+
+	@Test
+	fun `revoked certificate is detected and surfaced as untrusted`() {
+		val json = """
+			{ "active_manifest":"m1","manifests":{"m1":{"signature_info":{"issuer":"X"}}},
+			  "validation_state":"Valid",
+			  "validation_results":{"activeManifest":{"failure":[
+			    {"code":"signingCredential.ocsp.revoked","explanation":"revoked"}]}} }
+		""".trimIndent()
+		val data = parser.parse(json)
+		assertTrue(data.signerRevoked)
+		val summary = SummaryFactory.buildSummary(data, TrustLevel.UNTRUSTED)
+		assertTrue(summary.revoked)
+		assertEquals(OverallStatus.SIGNED_UNTRUSTED, summary.status)
+	}
+
+	@Test
 	fun `detectAi ignores AI only in ingredient provenance, not the asset's own claim`() {
 		// Active manifest is a plain capture; only an *ingredient* manifest is AI-generated.
 		// The asset itself is not AI-generated, so the headline flag must stay false.
