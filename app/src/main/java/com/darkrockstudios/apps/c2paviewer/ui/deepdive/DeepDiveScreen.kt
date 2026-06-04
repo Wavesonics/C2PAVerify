@@ -44,6 +44,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.C2paManifestData
 import com.darkrockstudios.apps.c2paviewer.model.c2pa.ValidationCategory
+import com.darkrockstudios.apps.c2paviewer.model.summary.OverallStatus
+import com.darkrockstudios.apps.c2paviewer.model.trust.TrustRule
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionUiState
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import kotlinx.serialization.json.Json
@@ -78,7 +80,8 @@ fun DeepDiveScreen(
 			)
 		},
 	) { innerPadding ->
-		val manifest = (state as? InspectionUiState.Loaded)?.result?.manifest
+		val result = (state as? InspectionUiState.Loaded)?.result
+		val manifest = result?.manifest
 		if (manifest == null) {
 			Column(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {
 				Text(stringResource(R.string.status_no_manifest_body))
@@ -92,7 +95,15 @@ fun DeepDiveScreen(
 			verticalArrangement = Arrangement.spacedBy(12.dp),
 		) {
 			item { ManifestSection(manifest) }
-			item { SignatureSection(manifest) }
+			item {
+				SignatureSection(
+					manifest = manifest,
+					status = result.summary.status,
+					onAllow = { viewModel.setSignerRule(TrustRule.ALLOW) },
+					onDeny = { viewModel.setSignerRule(TrustRule.DENY) },
+					onClear = { viewModel.setSignerRule(null) },
+				)
+			}
 			item { AssertionsSection(manifest) }
 			item { IngredientsSection(manifest) }
 			item { ValidationSection(manifest) }
@@ -113,12 +124,19 @@ private fun ManifestSection(manifest: C2paManifestData) {
 }
 
 @Composable
-private fun SignatureSection(manifest: C2paManifestData) {
+private fun SignatureSection(
+	manifest: C2paManifestData,
+	status: OverallStatus,
+	onAllow: () -> Unit,
+	onDeny: () -> Unit,
+	onClear: () -> Unit,
+) {
 	val sig = manifest.activeManifest?.signature
-	val trust = when {
-		manifest.signerTrusted -> stringResource(R.string.trust_trusted)
-		manifest.signerUntrusted -> stringResource(R.string.trust_untrusted)
-		else -> stringResource(R.string.trust_unknown)
+	// Effective trust (reflects any user allow/deny override), from the computed verdict.
+	val trust = when (status) {
+		OverallStatus.SIGNED_TRUSTED -> stringResource(R.string.trust_trusted)
+		OverallStatus.SIGNED_UNTRUSTED, OverallStatus.TAMPERED_INVALID -> stringResource(R.string.trust_untrusted)
+		OverallStatus.NO_MANIFEST -> stringResource(R.string.trust_unknown)
 	}
 	SectionCard(stringResource(R.string.section_signature), Icons.Filled.Lock) {
 		KeyValue(stringResource(R.string.label_issuer), sig?.issuer)
@@ -127,6 +145,13 @@ private fun SignatureSection(manifest: C2paManifestData) {
 		KeyValue(stringResource(R.string.label_serial), sig?.certSerialNumber)
 		KeyValue(stringResource(R.string.label_signed_time), sig?.time)
 		KeyValue(stringResource(R.string.label_trust), trust)
+		if (sig != null) {
+			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+				TextButton(onClick = onAllow) { Text(stringResource(R.string.action_trust_signer)) }
+				TextButton(onClick = onDeny) { Text(stringResource(R.string.action_distrust_signer)) }
+				TextButton(onClick = onClear) { Text(stringResource(R.string.action_clear_override)) }
+			}
+		}
 	}
 }
 

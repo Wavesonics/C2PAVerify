@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -22,6 +23,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,13 +35,28 @@ import com.darkrockstudios.apps.c2paviewer.R
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PickerScreen(onImagePicked: (String) -> Unit) {
+fun PickerScreen(
+	onImagePicked: (String) -> Unit,
+	onOpenTrust: () -> Unit,
+) {
 	val pickMedia = rememberLauncherForActivityResult(
 		ActivityResultContracts.PickVisualMedia(),
 	) { uri -> if (uri != null) onImagePicked(uri.toString()) }
 
 	Scaffold(
-		topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }) },
+		topBar = {
+			TopAppBar(
+				title = { Text(stringResource(R.string.app_name)) },
+				actions = {
+					IconButton(onClick = onOpenTrust) {
+						Icon(
+							painter = painterResource(R.drawable.ic_shield),
+							contentDescription = stringResource(R.string.trust_manage),
+						)
+					}
+				},
+			)
+		},
 	) { innerPadding ->
 		Column(
 			modifier = Modifier

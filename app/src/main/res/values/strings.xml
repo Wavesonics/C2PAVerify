@@ -51,4 +51,20 @@
     <string name="empty_section">None</string>
     <string name="show">Show</string>
     <string name="hide">Hide</string>
+
+    <!-- Trust management -->
+    <string name="trust_title">Trusted authorities</string>
+    <string name="trust_manage">Manage trusted authorities</string>
+    <string name="trust_your_rules">Your rules (%1$d)</string>
+    <string name="trust_your_rules_empty">No custom rules yet. Open a photo\'s details to allow or deny its signer.</string>
+    <string name="trust_default_cas">Default trusted authorities (%1$d)</string>
+    <string name="trust_expires">Expires %1$s</string>
+    <string name="rule_allow">ALLOW</string>
+    <string name="rule_deny">DENY</string>
+    <string name="remove">Remove</string>
+
+    <!-- Deep-dive signer actions -->
+    <string name="action_trust_signer">Trust this signer</string>
+    <string name="action_distrust_signer">Don\'t trust</string>
+    <string name="action_clear_override">Clear override</string>
 </resources>

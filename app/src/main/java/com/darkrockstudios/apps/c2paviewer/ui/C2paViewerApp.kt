@@ -13,8 +13,10 @@ import androidx.navigation.compose.rememberNavController
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionScaffold
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Landing
+import com.darkrockstudios.apps.c2paviewer.ui.navigation.Trust
 import com.darkrockstudios.apps.c2paviewer.ui.navigation.Viewer
 import com.darkrockstudios.apps.c2paviewer.ui.picker.PickerScreen
+import com.darkrockstudios.apps.c2paviewer.ui.trust.TrustManagementScreen
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.androidx.compose.koinViewModel
 
@@ -43,6 +45,7 @@ fun C2paViewerApp(sharedImage: StateFlow<String?>) {
 					currentImage = uri
 					navController.navigate(Viewer)
 				},
+				onOpenTrust = { navController.navigate(Trust) },
 			)
 		}
 		composable<Viewer> {
@@ -51,6 +54,9 @@ fun C2paViewerApp(sharedImage: StateFlow<String?>) {
 				viewModel = inspectionViewModel,
 				onExit = { navController.popBackStack() },
 			)
+		}
+		composable<Trust> {
+			TrustManagementScreen(onBack = { navController.popBackStack() })
 		}
 	}
 }
