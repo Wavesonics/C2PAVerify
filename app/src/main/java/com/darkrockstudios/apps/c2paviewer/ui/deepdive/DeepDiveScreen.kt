@@ -4,6 +4,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -138,6 +140,7 @@ private fun ManifestSection(manifest: C2paManifestData) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun SignatureSection(
 	manifest: C2paManifestData,
 	status: OverallStatus,
@@ -160,7 +163,9 @@ private fun SignatureSection(
 		KeyValue(stringResource(R.string.label_signed_time), sig?.time)
 		KeyValue(stringResource(R.string.label_trust), trust)
 		if (sig != null) {
-			Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+			// FlowRow so the actions wrap onto another line in a narrow (tablet) detail pane
+			// instead of overflowing — a plain Row clipped "Clear override" and inflated the card.
+			FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 				TextButton(onClick = onAllow) { Text(stringResource(R.string.action_trust_signer)) }
 				TextButton(onClick = onDeny) { Text(stringResource(R.string.action_distrust_signer)) }
 				TextButton(onClick = onClear) { Text(stringResource(R.string.action_clear_override)) }
