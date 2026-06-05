@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.darkrockstudios.apps.c2paviewer.R
+import com.darkrockstudios.apps.c2paviewer.model.share.ReportBadge
+import com.darkrockstudios.apps.c2paviewer.model.share.ReportBadgeStyle
 import com.darkrockstudios.apps.c2paviewer.model.share.ReportOverlay
 import com.darkrockstudios.apps.c2paviewer.model.share.toneFor
 import com.darkrockstudios.apps.c2paviewer.model.summary.C2paSummary
@@ -218,12 +220,25 @@ private fun reportOverlayFor(summary: C2paSummary): ReportOverlay {
 			summary.signedTime?.let { add(stringResource(R.string.summary_signed_time, it)) }
 		}
 	}
+	val badges = buildList {
+		if (summary.ai.isAiGenerated) {
+			add(ReportBadge(stringResource(R.string.ai_badge), ReportBadgeStyle.AI))
+		}
+		if (summary.aiModified.isAiModified) {
+			add(ReportBadge(stringResource(R.string.ai_modified_badge), ReportBadgeStyle.AI))
+		}
+		if (summary.capture.isCameraCapture) {
+			add(ReportBadge(stringResource(R.string.capture_badge), ReportBadgeStyle.CAPTURE))
+		}
+		if (summary.revoked) {
+			add(ReportBadge(stringResource(R.string.revoked_badge), ReportBadgeStyle.ALERT))
+		}
+	}
 	return ReportOverlay(
 		statusLabel = statusLabel,
 		tone = toneFor(summary.status),
 		details = details,
-		isAiGenerated = summary.ai.isAiGenerated,
-		aiLabel = stringResource(R.string.ai_badge),
+		badges = badges,
 		watermark = stringResource(R.string.report_watermark),
 	)
 }

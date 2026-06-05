@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.core.content.FileProvider
 import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
+import com.darkrockstudios.apps.c2paviewer.model.share.ReportBadgeStyle
 import com.darkrockstudios.apps.c2paviewer.model.share.ReportOverlay
 import com.darkrockstudios.apps.c2paviewer.model.share.ReportTone
 import kotlinx.coroutines.Dispatchers
@@ -92,12 +93,22 @@ class ReportRendererDataSource(private val context: Context) {
 		val contentWidth = width - 2 * margin - 2 * padding
 		val lines = overlay.details.flatMap { wrap(it, bodyPaint, contentWidth) }
 
-		// Measure panel height: status row + detail lines + optional AI badge + watermark.
+		// Lay the indicator pills out into (wrapping) rows up front so we can size the panel.
+		val badgePaint = textPaint(bodySize, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
+		val pillHeight = bodySize * 2.1f
+		val pillGap = padding * 0.5f
+		val pills = overlay.badges.map { badge ->
+			val text = "${badgeGlyph(badge.style)} ${badge.label}"
+			BadgePill(badge.style, text, badgePaint.measureText(text) + padding * 1.6f)
+		}
+		val badgeRows = flowIntoRows(pills, contentWidth, pillGap)
+
+		// Measure panel height: status row + detail lines + badge rows + watermark.
 		val titleHeight = lineHeight(titlePaint)
 		val bodyLineHeight = lineHeight(bodyPaint) + lineGap
-		val badgeHeight = if (overlay.isAiGenerated) bodySize * 2.2f + lineGap else 0f
+		val badgeAreaHeight = if (badgeRows.isEmpty()) 0f else badgeRows.size * (pillHeight + lineGap)
 		val markHeight = lineHeight(markPaint) + lineGap
-		val panelHeight = padding * 2 + titleHeight + lines.size * bodyLineHeight + badgeHeight + markHeight
+		val panelHeight = padding * 2 + titleHeight + lines.size * bodyLineHeight + badgeAreaHeight + markHeight
 
 		val panel = RectF(margin, height - margin - panelHeight, width - margin, height - margin)
 		val corner = unit * 0.8f
@@ -118,14 +129,15 @@ class ReportRendererDataSource(private val context: Context) {
 			y += bodyLineHeight
 		}
 
-		if (overlay.isAiGenerated) {
-			val badgePaint = textPaint(bodySize, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
-			val label = "✨ ${overlay.aiLabel}"
-			val textW = badgePaint.measureText(label)
-			val badge = RectF(x, y, x + textW + padding * 1.6f, y + bodySize * 2.1f)
-			canvas.drawRoundRect(badge, badge.height() / 2f, badge.height() / 2f, fillPaint(AI_COLOR))
-			canvas.drawText(label, badge.left + padding * 0.8f, badge.centerY() + badgePaint.textSize * 0.35f, badgePaint)
-			y += badgeHeight
+		for (row in badgeRows) {
+			var bx = x
+			for (pill in row) {
+				val rect = RectF(bx, y, bx + pill.width, y + pillHeight)
+				canvas.drawRoundRect(rect, pillHeight / 2f, pillHeight / 2f, fillPaint(badgeColor(pill.style)))
+				canvas.drawText(pill.text, rect.left + padding * 0.8f, rect.centerY() + badgePaint.textSize * 0.35f, badgePaint)
+				bx += pill.width + pillGap
+			}
+			y += pillHeight + lineGap
 		}
 
 		// Brand mark, bottom-right of the panel.
@@ -185,11 +197,43 @@ class ReportRendererDataSource(private val context: Context) {
 		ReportTone.NEUTRAL -> 0xFF9E9E9E.toInt()
 	}
 
+	/** A measured indicator pill ready to draw. */
+	private data class BadgePill(val style: ReportBadgeStyle, val text: String, val width: Float)
+
+	/** Greedy left-to-right flow of pills into rows no wider than [maxWidth]. */
+	private fun flowIntoRows(pills: List<BadgePill>, maxWidth: Float, gap: Float): List<List<BadgePill>> {
+		val rows = mutableListOf<MutableList<BadgePill>>()
+		var rowWidth = 0f
+		for (pill in pills) {
+			if (rows.isEmpty() || rowWidth + pill.width > maxWidth) {
+				rows.add(mutableListOf())
+				rowWidth = 0f
+			}
+			rows.last().add(pill)
+			rowWidth += pill.width + gap
+		}
+		return rows
+	}
+
+	private fun badgeGlyph(style: ReportBadgeStyle): String = when (style) {
+		ReportBadgeStyle.AI -> "✨"          // ✨
+		ReportBadgeStyle.CAPTURE -> "📷" // 📷
+		ReportBadgeStyle.ALERT -> "⛔"        // ⛔
+	}
+
+	private fun badgeColor(style: ReportBadgeStyle): Int = when (style) {
+		ReportBadgeStyle.AI -> AI_COLOR
+		ReportBadgeStyle.CAPTURE -> CAPTURE_COLOR
+		ReportBadgeStyle.ALERT -> ALERT_COLOR
+	}
+
 	private companion object {
 		const val MAX_EDGE_PX = 2048
 		const val REPORT_DIR = "reports"
 		const val REPORT_FILE = "c2pa-report.png"
 		const val FILEPROVIDER_SUFFIX = ".fileprovider"
 		val AI_COLOR = 0xFF7C4DFF.toInt()
+		val CAPTURE_COLOR = 0xFF1565C0.toInt()
+		val ALERT_COLOR = 0xFFD32F2F.toInt()
 	}
 }
