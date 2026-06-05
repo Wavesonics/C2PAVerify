@@ -87,6 +87,34 @@
     <string name="assertion_source">Source: %1$s</string>
     <string name="assertion_when">When %1$s</string>
 
+    <!-- Actions timeline -->
+    <string name="actions_timeline_title">What happened</string>
+    <string name="actions_timeline_subtitle">The steps recorded in this image\'s history. Tap a step to learn what it means.</string>
+    <string name="actions_timeline_empty">No actions were recorded in this image\'s Content Credentials.</string>
+    <string name="action_recorded_note">Recorded note: %1$s</string>
+    <string name="action_explain_generic">This step was recorded in the image\'s Content Credentials as part of its history.</string>
+    <string name="action_explain_created">The image was first created — this is the origin of the file. The source (camera, software, or AI) is shown alongside.</string>
+    <string name="action_explain_opened">An existing file was opened in an editor, starting a new round of edits.</string>
+    <string name="action_explain_placed">Another image or asset was imported and placed into this one (for example a layer or a pasted element).</string>
+    <string name="action_explain_removed">Part of the content was removed or deleted.</string>
+    <string name="action_explain_edited">The image was edited. This is a general edit; more specific steps (like cropping or colour) may also be listed.</string>
+    <string name="action_explain_cropped">The image was cropped — its edges were trimmed to change the framing.</string>
+    <string name="action_explain_color_adjustments">Colours, brightness, contrast, or similar tones were adjusted.</string>
+    <string name="action_explain_drawing">Content was drawn or painted onto the image by hand.</string>
+    <string name="action_explain_filtered">A filter or effect was applied to the whole image.</string>
+    <string name="action_explain_resized">The image was resized or scaled to different dimensions.</string>
+    <string name="action_explain_orientation">The image was rotated or flipped.</string>
+    <string name="action_explain_watermarked">A watermark was added to the image.</string>
+    <string name="action_explain_metadata">Metadata (such as captions, location, or other embedded info) was edited.</string>
+    <string name="action_explain_redacted">Information was redacted — hidden or blacked out — from the content.</string>
+    <string name="action_explain_converted">The image was converted to a different format or colour space.</string>
+    <string name="action_explain_transcoded">The image data was re-encoded, often to a different format or compression.</string>
+    <string name="action_explain_formatted">The file was reformatted or repackaged without changing the visible content.</string>
+    <string name="action_explain_published">The image was published or distributed.</string>
+    <string name="action_explain_managed">The asset was managed by a system (for example imported into or tracked by a library).</string>
+    <string name="action_explain_produced">The image was produced or rendered into its final form.</string>
+    <string name="action_explain_unknown">An action was recorded, but its type wasn\'t specified by the tool that made it.</string>
+
     <!-- Trust management -->
     <string name="trust_title">Trusted authorities</string>
     <string name="trust_manage">Manage trusted authorities</string>

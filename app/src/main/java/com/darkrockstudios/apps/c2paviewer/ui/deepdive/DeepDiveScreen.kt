@@ -1,21 +1,30 @@
 package com.darkrockstudios.apps.c2paviewer.ui.deepdive
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -27,6 +36,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -48,6 +58,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
@@ -67,6 +78,7 @@ import com.darkrockstudios.apps.c2paviewer.model.trust.TrustRule
 import com.darkrockstudios.apps.c2paviewer.ui.common.plus
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionUiState
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
+import com.darkrockstudios.apps.c2paviewer.ui.inspection.SummaryCard
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
@@ -121,6 +133,10 @@ fun DeepDiveScreen(
 				contentPadding = innerPadding + PaddingValues(16.dp),
 				verticalArrangement = Arrangement.spacedBy(12.dp),
 			) {
+				// Lead with the high-level state (origin chips + verdict, same as the viewer card) and
+				// the action chain — the parts most people actually want — then the technical detail.
+				item { DisableSelection { SummaryCard(result.summary) } }
+				item { ActionsTimelineSection(manifest) }
 				item { ManifestSection(manifest) }
 			item {
 				SignatureSection(
@@ -215,46 +231,33 @@ private fun AssertionsSection(manifest: C2paManifestData) {
 }
 
 /**
- * One assertion. Parsed `c2pa.actions` render as an always-visible action list; every other
- * assertion shows its raw JSON behind a per-entry toggle, collapsed by default (some, like content
- * hashes, are large and noisy).
+ * One assertion, shown uniformly as raw JSON behind a per-entry toggle (collapsed by default — some,
+ * like content hashes, are large and noisy). The friendly `c2pa.actions` chain is presented up top
+ * in [ActionsTimelineSection], so it isn't duplicated here.
  */
 @Composable
 private fun AssertionEntry(assertion: C2paAssertion, index: Int) {
-	val actions = remember(assertion) {
-		if (AssertionParser.isActionsAssertion(assertion.label)) AssertionParser.parseActions(assertion.data) else emptyList()
-	}
 	// Show the technical label as a caption only when the friendly title differs (for unrecognised
 	// assertion types the title falls back to the raw label, which would just be a duplicate).
 	val title = assertionTitle(assertion.label)
 	val showLabel = title != assertion.label
-	if (actions.isNotEmpty()) {
-		Text(title, style = MaterialTheme.typography.titleSmall)
-		if (showLabel) {
-			Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-		}
-		Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-			actions.forEach { ActionRow(it) }
-		}
-	} else {
-		var expanded by rememberSaveable(index, assertion.label) { mutableStateOf(false) }
-		Row(
-			modifier = Modifier.fillMaxWidth(),
-			horizontalArrangement = Arrangement.SpaceBetween,
-			verticalAlignment = Alignment.CenterVertically,
-		) {
-			Column(Modifier.weight(1f)) {
-				Text(title, style = MaterialTheme.typography.titleSmall)
-				if (showLabel) {
-					Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-				}
-			}
-			TextButton(onClick = { expanded = !expanded }) {
-				Text(stringResource(if (expanded) R.string.hide else R.string.show))
+	var expanded by rememberSaveable(index, assertion.label) { mutableStateOf(false) }
+	Row(
+		modifier = Modifier.fillMaxWidth(),
+		horizontalArrangement = Arrangement.SpaceBetween,
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		Column(Modifier.weight(1f)) {
+			Text(title, style = MaterialTheme.typography.titleSmall)
+			if (showLabel) {
+				Text(assertion.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 			}
 		}
-		AnimatedVisibility(visible = expanded) { Mono(prettyPrint(assertion.data)) }
+		TextButton(onClick = { expanded = !expanded }) {
+			Text(stringResource(if (expanded) R.string.hide else R.string.show))
+		}
 	}
+	AnimatedVisibility(visible = expanded) { Mono(prettyPrint(assertion.data)) }
 }
 
 /** Friendly category name for an assertion label; falls back to the raw label. */
@@ -267,20 +270,95 @@ private fun assertionTitle(label: String): String = when {
 	else -> label
 }
 
+/**
+ * The action chain as a tappable vertical timeline — the part most people want to explore. Each step
+ * is a coloured node (creation / edit / AI) connected by a rail, with its details; tapping a step
+ * opens a plain-language explanation of what that kind of action means.
+ */
 @Composable
-private fun ActionRow(action: ParsedAction) {
-	Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-		Icon(
-			imageVector = actionIcon(action.code),
-			contentDescription = null,
-			modifier = Modifier.size(20.dp).padding(top = 2.dp),
-			tint = MaterialTheme.colorScheme.primary,
-		)
-		Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-			Text(action.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-			action.description?.let {
-				Text(it, style = MaterialTheme.typography.bodySmall)
+private fun ActionsTimelineSection(manifest: C2paManifestData) {
+	val actions = remember(manifest) {
+		manifest.activeManifest?.assertions
+			?.filter { AssertionParser.isActionsAssertion(it.label) }
+			?.flatMap { AssertionParser.parseActions(it.data) }
+			.orEmpty()
+	}
+	var info by remember { mutableStateOf<ParsedAction?>(null) }
+	info?.let { ActionInfoDialog(it, onDismiss = { info = null }) }
+
+	Card(Modifier.fillMaxWidth()) {
+		Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+			SectionHeader(stringResource(R.string.actions_timeline_title), Icons.AutoMirrored.Filled.List)
+			if (actions.isEmpty()) {
+				DisableSelection {
+					Text(
+						stringResource(R.string.actions_timeline_empty),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+			} else {
+				DisableSelection {
+					Text(
+						stringResource(R.string.actions_timeline_subtitle),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+				Column {
+					actions.forEachIndexed { i, action ->
+						ActionStep(
+							action = action,
+							isFirst = i == 0,
+							isLast = i == actions.lastIndex,
+							onClick = { info = action },
+						)
+					}
+				}
 			}
+		}
+	}
+}
+
+@Composable
+private fun ActionStep(action: ParsedAction, isFirst: Boolean, isLast: Boolean, onClick: () -> Unit) {
+	val node = actionNode(action)
+	val lineColor = MaterialTheme.colorScheme.outlineVariant
+	Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+		// Rail: a continuous line threaded through a coloured node. Top stub hidden on the first step,
+		// bottom connector hidden on the last, so the line begins and ends at the end nodes.
+		Column(
+			modifier = Modifier.width(36.dp).fillMaxHeight(),
+			horizontalAlignment = Alignment.CenterHorizontally,
+		) {
+			Box(Modifier.width(2.dp).height(14.dp).background(if (isFirst) Color.Transparent else lineColor))
+			Box(
+				modifier = Modifier.size(30.dp).clip(CircleShape).background(node.background),
+				contentAlignment = Alignment.Center,
+			) {
+				Icon(actionIcon(action.code), contentDescription = null, modifier = Modifier.size(17.dp), tint = node.foreground)
+			}
+			Box(Modifier.width(2.dp).weight(1f).background(if (isLast) Color.Transparent else lineColor))
+		}
+		Spacer(Modifier.width(12.dp))
+		Column(
+			modifier = Modifier
+				.weight(1f)
+				.clip(RoundedCornerShape(8.dp))
+				.clickable(onClick = onClick)
+				.padding(start = 4.dp, end = 4.dp, top = 10.dp, bottom = 18.dp),
+			verticalArrangement = Arrangement.spacedBy(2.dp),
+		) {
+			Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+				Text(action.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+				Icon(
+					Icons.Filled.Info,
+					contentDescription = stringResource(R.string.show),
+					modifier = Modifier.size(15.dp),
+					tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+				)
+			}
+			action.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 			action.softwareAgent?.let {
 				Text(
 					stringResource(R.string.assertion_using, it),
@@ -298,7 +376,7 @@ private fun ActionRow(action: ParsedAction) {
 			action.digitalSource?.let { source ->
 				if (source.isAi) {
 					AssistChip(
-						onClick = {},
+						onClick = onClick,
 						label = { Text(source.label) },
 						leadingIcon = {
 							Icon(
@@ -321,11 +399,83 @@ private fun ActionRow(action: ParsedAction) {
 	}
 }
 
+@Composable
+private fun ActionInfoDialog(action: ParsedAction, onDismiss: () -> Unit) {
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		icon = { Icon(actionIcon(action.code), contentDescription = null) },
+		title = { Text(action.label) },
+		text = {
+			Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+				Text(actionExplanation(action.code))
+				action.description?.let {
+					Text(
+						stringResource(R.string.action_recorded_note, it),
+						style = MaterialTheme.typography.bodySmall,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+				}
+			}
+		},
+		confirmButton = {
+			TextButton(onClick = onDismiss) { Text(stringResource(R.string.got_it)) }
+		},
+	)
+}
+
+private class NodeColors(val background: Color, val foreground: Color)
+
+/** Node colour by action kind: AI source → purple, creation → primary, edit → tertiary, else neutral. */
+@Composable
+private fun actionNode(action: ParsedAction): NodeColors = when {
+	action.digitalSource?.isAi == true -> NodeColors(Color(0xFF7C4DFF), Color.White)
+	action.code in CREATION_ACTIONS -> NodeColors(
+		MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary,
+	)
+
+	action.code in EDITING_ACTIONS -> NodeColors(
+		MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary,
+	)
+
+	else -> NodeColors(
+		MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.onSecondary,
+	)
+}
+
+/** Plain-language explanation of what a C2PA action code means; falls back to a generic line. */
+@Composable
+private fun actionExplanation(code: String): String = when (code) {
+	"c2pa.created" -> stringResource(R.string.action_explain_created)
+	"c2pa.opened" -> stringResource(R.string.action_explain_opened)
+	"c2pa.placed" -> stringResource(R.string.action_explain_placed)
+	"c2pa.removed" -> stringResource(R.string.action_explain_removed)
+	"c2pa.edited" -> stringResource(R.string.action_explain_edited)
+	"c2pa.cropped" -> stringResource(R.string.action_explain_cropped)
+	"c2pa.color_adjustments" -> stringResource(R.string.action_explain_color_adjustments)
+	"c2pa.drawing" -> stringResource(R.string.action_explain_drawing)
+	"c2pa.filtered" -> stringResource(R.string.action_explain_filtered)
+	"c2pa.resized" -> stringResource(R.string.action_explain_resized)
+	"c2pa.orientation" -> stringResource(R.string.action_explain_orientation)
+	"c2pa.watermarked" -> stringResource(R.string.action_explain_watermarked)
+	"c2pa.metadata" -> stringResource(R.string.action_explain_metadata)
+	"c2pa.redacted" -> stringResource(R.string.action_explain_redacted)
+	"c2pa.converted" -> stringResource(R.string.action_explain_converted)
+	"c2pa.transcoded" -> stringResource(R.string.action_explain_transcoded)
+	"c2pa.formatted", "c2pa.repackaged" -> stringResource(R.string.action_explain_formatted)
+	"c2pa.published" -> stringResource(R.string.action_explain_published)
+	"c2pa.managed" -> stringResource(R.string.action_explain_managed)
+	"c2pa.produced" -> stringResource(R.string.action_explain_produced)
+	"c2pa.unknown" -> stringResource(R.string.action_explain_unknown)
+	else -> stringResource(R.string.action_explain_generic)
+}
+
 private fun actionIcon(code: String): ImageVector = when {
-	code == "c2pa.created" || code == "c2pa.opened" || code == "c2pa.placed" -> Icons.Filled.Add
+	code in CREATION_ACTIONS -> Icons.Filled.Add
 	code in EDITING_ACTIONS -> Icons.Filled.Edit
 	else -> Icons.Filled.Info
 }
+
+private val CREATION_ACTIONS = setOf("c2pa.created", "c2pa.opened", "c2pa.placed")
 
 private val EDITING_ACTIONS = setOf(
 	"c2pa.edited", "c2pa.cropped", "c2pa.color_adjustments", "c2pa.drawing",
