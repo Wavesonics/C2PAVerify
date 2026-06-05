@@ -2,8 +2,11 @@ package com.darkrockstudios.apps.c2paviewer.datasource.c2pa
 
 import androidx.test.platform.app.InstrumentationRegistry
 import com.darkrockstudios.apps.c2paviewer.model.common.ImageSource
+import com.darkrockstudios.apps.c2paviewer.model.summary.SummaryFactory
 import com.darkrockstudios.apps.c2paviewer.model.trust.TrustMaterial
+import com.darkrockstudios.apps.c2paviewer.repository.C2paManifestParser
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.junit.Test
 import java.io.File
 
@@ -101,5 +104,38 @@ class C2paReaderCaptureTest {
 		}
 		File(outDir, "_trust_summary.txt").writeText(summary.toString())
 		println("C2PA trust capture:\n$summary")
+	}
+
+	/**
+	 * Reads the bundled landing example (`assets/c2pa/examples/ai-generated.jpg` from the app's own
+	 * assets) through the real reader + the app's parser/AI detector, to confirm it parses, its
+	 * trust verdict, and whether it flags as AI per the asset's-own-claim rule.
+	 */
+	@Test
+	fun verifyBundledAiExample() = runBlocking {
+		val appCtx = InstrumentationRegistry.getInstrumentation().targetContext
+		val anchorsPem = appCtx.assets.open("trust/c2pa-trust-anchors.pem")
+			.use { it.readBytes().decodeToString() }
+		val trust = TrustMaterial(trustAnchorsPem = anchorsPem)
+		val bytes = appCtx.assets.open("c2pa/examples/ai-generated.jpg").use { it.readBytes() }
+
+		val out = StringBuilder()
+		when (val read = dataSource.read(ImageSource.Bytes(bytes, "image/jpeg"), trust)) {
+			is C2paRawRead.NoManifest -> out.appendLine("ai-generated.jpg -> NoManifest")
+			is C2paRawRead.Manifest -> {
+				val parser = C2paManifestParser(Json { ignoreUnknownKeys = true; isLenient = true })
+				val data = parser.parse(read.manifestJson)
+				val ai = SummaryFactory.detectAi(data)
+				out.appendLine("validationState=${data.validationState}")
+				out.appendLine("trusted=${data.signerTrusted} untrusted=${data.signerUntrusted}")
+				out.appendLine("isAi=${ai.isAiGenerated}")
+				out.appendLine("activeSourceTypes=${ai.sourceTypes}")
+				out.appendLine("signer=${data.activeManifest?.signature?.issuer}")
+				out.appendLine("generator=${data.activeManifest?.claimGenerator}")
+			}
+		}
+		val outDir = File(appCtx.getExternalFilesDir(null), "c2pa-capture-trust").apply { mkdirs() }
+		File(outDir, "_ai_example.txt").writeText(out.toString())
+		println("AI EXAMPLE CHECK:\n$out")
 	}
 }

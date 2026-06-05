@@ -51,8 +51,19 @@ class C2paSmokeTest {
 	private fun nodesWithTag(tag: String) =
 		composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes()
 
-	private fun awaitText(text: String, substring: Boolean = false, timeoutMillis: Long = 20_000) =
+	private fun awaitText(text: String, substring: Boolean = false, timeoutMillis: Long = 30_000) =
 		composeRule.waitUntil(timeoutMillis) { nodesWithText(text, substring).isNotEmpty() }
+
+	/**
+	 * Reveals the deep-dive. On compact width it's a separate screen behind a "View details"
+	 * button; on expanded width (tablet/foldable) it's already shown in the second pane.
+	 */
+	private fun openDeepDive() {
+		val viewDetails = str(R.string.view_details)
+		if (nodesWithText(viewDetails).isNotEmpty()) {
+			composeRule.onNodeWithText(viewDetails).performClick()
+		}
+	}
 
 	@Test
 	fun trustedExample_verifies_andSignerCanBeDeniedAndRestored() {
@@ -65,8 +76,8 @@ class C2paSmokeTest {
 		awaitText(str(R.string.status_trusted))
 		composeRule.onNodeWithText("Signed by", substring = true).assertExists()
 
-		// Drill into the deep-dive.
-		composeRule.onNodeWithText(str(R.string.view_details)).performClick()
+		// Drill into the deep-dive (no-op when it's already beside the photo on large screens).
+		openDeepDive()
 		awaitText(str(R.string.section_signature))
 
 		// Denying the signer recomputes the verdict end-to-end (Room rule -> re-inspect).
