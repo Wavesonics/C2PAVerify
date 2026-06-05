@@ -25,6 +25,9 @@ object SummaryFactory {
 				ai = AiIndicator(isAiGenerated = false, sourceTypes = emptyList()),
 				aiModified = AiModifiedIndicator(isAiModified = false, sourceTypes = emptyList()),
 				capture = CaptureIndicator(isCameraCapture = false, sourceTypes = emptyList()),
+				software = SoftwareCreatedIndicator(isSoftwareCreated = false, sourceTypes = emptyList()),
+				enhanced = EnhancedIndicator(isEnhanced = false, sourceTypes = emptyList()),
+				edited = EditedIndicator(isEdited = false, actions = emptyList()),
 			)
 		}
 
@@ -46,6 +49,9 @@ object SummaryFactory {
 			ai = detectAi(manifest),
 			aiModified = detectAiModified(manifest),
 			capture = detectCapture(manifest),
+			software = detectSoftware(manifest),
+			enhanced = detectEnhanced(manifest),
+			edited = detectEdited(manifest),
 			revoked = manifest.signerRevoked,
 		)
 	}
@@ -86,6 +92,39 @@ object SummaryFactory {
 		return CaptureIndicator(isCameraCapture = isCapture, sourceTypes = sourceTypes)
 	}
 
+	/**
+	 * Flags software-authored media — IPTC `digitalCreation` ("created by a human using
+	 * non-generative tools": digital painting, graphic design, a screenshot). Distinct from a camera
+	 * capture and from AI generation. Scans only the active manifest.
+	 */
+	fun detectSoftware(manifest: C2paManifestData): SoftwareCreatedIndicator {
+		val sourceTypes = activeSourceTypes(manifest)
+		val isSoftware = sourceTypes.any { it.segment() in SOFTWARE_SOURCE_TYPES }
+		return SoftwareCreatedIndicator(isSoftwareCreated = isSoftware, sourceTypes = sourceTypes)
+	}
+
+	/**
+	 * Flags algorithmically enhanced media — IPTC `algorithmicallyEnhanced` (sharpening, noise
+	 * reduction, upscaling). Computational processing, not generative AI. Scans only the active
+	 * manifest.
+	 */
+	fun detectEnhanced(manifest: C2paManifestData): EnhancedIndicator {
+		val sourceTypes = activeSourceTypes(manifest)
+		val isEnhanced = sourceTypes.any { it.segment() in ENHANCED_SOURCE_TYPES }
+		return EnhancedIndicator(isEnhanced = isEnhanced, sourceTypes = sourceTypes)
+	}
+
+	/**
+	 * Flags ordinary edits after capture/creation, derived from the active manifest's `c2pa.actions`
+	 * codes — crop, colour adjustments, retouch, etc. ([EDIT_ACTIONS]). Pure-creation actions like
+	 * `c2pa.created`/`c2pa.opened` are ignored, so a freshly captured-and-signed photo is *not*
+	 * flagged. These are human/software edits, not AI generation.
+	 */
+	fun detectEdited(manifest: C2paManifestData): EditedIndicator {
+		val edits = activeActionCodes(manifest).filter { it.lowercase() in EDIT_ACTIONS }
+		return EditedIndicator(isEdited = edits.isNotEmpty(), actions = edits)
+	}
+
 	/** Last path segment of an IPTC digitalSourceType URI, lower-cased. */
 	private fun String.segment(): String = substringAfterLast('/').lowercase()
 
@@ -97,21 +136,51 @@ object SummaryFactory {
 
 	private val CAPTURE_SOURCE_TYPES = setOf("digitalcapture", "computationalcapture")
 
+	// Authored in software with non-generative tools.
+	private val SOFTWARE_SOURCE_TYPES = setOf("digitalcreation")
+
+	// Algorithmically enhanced (sharpen / denoise / upscale), not generative.
+	private val ENHANCED_SOURCE_TYPES = setOf("algorithmicallyenhanced")
+
+	// c2pa.actions codes that mean the content was altered after it was first created.
+	private val EDIT_ACTIONS = setOf(
+		"c2pa.color_adjustments",
+		"c2pa.cropped",
+		"c2pa.drawing",
+		"c2pa.edited",
+		"c2pa.filtered",
+		"c2pa.orientation",
+		"c2pa.resized",
+		"c2pa.placed",
+		"c2pa.removed",
+		"c2pa.spliced",
+		"c2pa.painted",
+		"c2pa.retouched",
+		"c2pa.redacted",
+	)
+
 	private fun activeSourceTypes(manifest: C2paManifestData): List<String> = buildList {
-		manifest.activeManifest?.assertions?.forEach { a -> collectDigitalSourceTypes(a.data, this) }
+		manifest.activeManifest?.assertions?.forEach { a -> collectStringValues(a.data, "digitalSourceType", this) }
 	}.distinct()
 
-	private fun collectDigitalSourceTypes(element: JsonElement?, out: MutableList<String>) {
+	private fun activeActionCodes(manifest: C2paManifestData): List<String> = buildList {
+		manifest.activeManifest?.assertions
+			?.filter { it.label.startsWith("c2pa.actions") }
+			?.forEach { a -> collectStringValues(a.data, "action", this) }
+	}.distinct()
+
+	/** Recursively collects every string value stored under [key] anywhere within [element]. */
+	private fun collectStringValues(element: JsonElement?, key: String, out: MutableList<String>) {
 		when (element) {
-			is JsonObject -> element.forEach { (key, value) ->
-				if (key == "digitalSourceType" && value is JsonPrimitive && value.isString) {
+			is JsonObject -> element.forEach { (k, value) ->
+				if (k == key && value is JsonPrimitive && value.isString) {
 					out.add(value.content)
 				} else {
-					collectDigitalSourceTypes(value, out)
+					collectStringValues(value, key, out)
 				}
 			}
 
-			is JsonArray -> element.forEach { collectDigitalSourceTypes(it, out) }
+			is JsonArray -> element.forEach { collectStringValues(it, key, out) }
 			else -> Unit
 		}
 	}

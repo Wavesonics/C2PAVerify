@@ -157,6 +157,100 @@ class SummaryFactoryTest {
 	}
 
 	@Test
+	fun `detectSoftware flags a digitalCreation origin`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCreation" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val data = parser.parse(json)
+		assertTrue(SummaryFactory.detectSoftware(data).isSoftwareCreated)
+		assertFalse(SummaryFactory.detectAi(data).isAiGenerated)
+		assertFalse(SummaryFactory.detectCapture(data).isCameraCapture)
+	}
+
+	@Test
+	fun `detectEnhanced flags an algorithmicallyEnhanced origin`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.edited",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/algorithmicallyEnhanced" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		assertTrue(SummaryFactory.detectEnhanced(parser.parse(json)).isEnhanced)
+	}
+
+	@Test
+	fun `detectEdited flags edit actions but not a plain capture`() {
+		val edited = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created" },
+			      { "action": "c2pa.color_adjustments" },
+			      { "action": "c2pa.cropped" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val editedResult = SummaryFactory.detectEdited(parser.parse(edited))
+		assertTrue(editedResult.isEdited)
+		assertTrue(editedResult.actions.contains("c2pa.color_adjustments"))
+
+		val captureOnly = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		assertFalse(SummaryFactory.detectEdited(parser.parse(captureOnly)).isEdited)
+	}
+
+	@Test
+	fun `primaryOrigin prefers AI over a co-present capture, edits drop to secondary`() {
+		val json = """
+			{
+			  "active_manifest": "m1",
+			  "manifests": { "m1": { "assertions": [
+			    { "label": "c2pa.actions.v2", "data": { "actions": [
+			      { "action": "c2pa.created",
+			        "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture" },
+			      { "action": "c2pa.color_adjustments" }
+			    ] } }
+			  ] } },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val summary = SummaryFactory.buildSummary(parser.parse(json), TrustLevel.TRUSTED)
+		assertEquals(ContentOrigin.CAMERA_CAPTURE, summary.primaryOrigin())
+		assertTrue(summary.hasOriginSignal())
+		// Camera is the headline; the edit shows as a secondary chip.
+		assertTrue(summary.secondaryOrigins().contains(ContentOrigin.EDITED))
+		assertFalse(summary.secondaryOrigins().contains(ContentOrigin.CAMERA_CAPTURE))
+	}
+
+	@Test
 	fun `revoked certificate is detected and surfaced as untrusted`() {
 		val json = """
 			{ "active_manifest":"m1","manifests":{"m1":{"signature_info":{"issuer":"X"}}},
