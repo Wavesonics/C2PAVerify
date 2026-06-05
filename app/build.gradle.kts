@@ -23,10 +23,28 @@ android {
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
 
+	// CI signs release builds from a keystore passed via env vars (see .github/workflows/release.yml).
+	// Locally these are unset, so release builds stay unsigned and debug builds are unaffected.
+	val releaseKeystore = System.getenv("KEYSTORE_FILE")
+
+	signingConfigs {
+		if (releaseKeystore != null) {
+			create("release") {
+				storeFile = file(releaseKeystore)
+				storePassword = System.getenv("KEYSTORE_PASSWORD")
+				keyAlias = System.getenv("KEY_ALIAS")
+				keyPassword = System.getenv("KEY_PASSWORD")
+			}
+		}
+	}
+
 	buildTypes {
 		release {
 			optimization {
 				enable = false
+			}
+			if (releaseKeystore != null) {
+				signingConfig = signingConfigs.getByName("release")
 			}
 		}
 	}
