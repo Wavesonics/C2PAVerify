@@ -46,7 +46,11 @@ import com.darkrockstudios.apps.c2paviewer.model.share.ReportBadgeStyle
 import com.darkrockstudios.apps.c2paviewer.model.share.ReportOverlay
 import com.darkrockstudios.apps.c2paviewer.model.share.toneFor
 import com.darkrockstudios.apps.c2paviewer.model.summary.C2paSummary
+import com.darkrockstudios.apps.c2paviewer.model.summary.ContentOrigin
 import com.darkrockstudios.apps.c2paviewer.model.summary.OverallStatus
+import com.darkrockstudios.apps.c2paviewer.model.summary.hasOriginSignal
+import com.darkrockstudios.apps.c2paviewer.model.summary.primaryOrigin
+import com.darkrockstudios.apps.c2paviewer.model.summary.secondaryOrigins
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionUiState
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.InspectionViewModel
 import com.darkrockstudios.apps.c2paviewer.ui.inspection.SummaryCard
@@ -202,7 +206,11 @@ private fun InspectionOverlay(
 	}
 }
 
-/** Resolves a [C2paSummary] into a localised [ReportOverlay] for the renderer. */
+/**
+ * Resolves a [C2paSummary] into a localised [ReportOverlay] for the renderer. Mirrors the on-screen
+ * summary card: the headline leads with the content origin (falling back to the trust verdict when
+ * there's none), the remaining origins become secondary pills, and the verdict is demoted to a line.
+ */
 @Composable
 private fun reportOverlayFor(summary: C2paSummary): ReportOverlay {
 	val statusLabel = when (summary.status) {
@@ -211,34 +219,81 @@ private fun reportOverlayFor(summary: C2paSummary): ReportOverlay {
 		OverallStatus.TAMPERED_INVALID -> stringResource(R.string.status_tampered)
 		OverallStatus.NO_MANIFEST -> stringResource(R.string.status_no_manifest)
 	}
+	val hasOrigin = summary.hasOriginSignal()
+	val manifestPresent = summary.status != OverallStatus.NO_MANIFEST
+	val origin = if (hasOrigin) originReport(summary.primaryOrigin()) else null
+
+	val headline = origin?.label ?: statusLabel
+	val tagline = origin?.tagline
+		?: stringResource(R.string.status_no_manifest_body).takeIf { summary.status == OverallStatus.NO_MANIFEST }
+
+	// Secondary pills: the same set the card shows (primary excluded, "Edited" suppressed under AI).
+	val badges = buildList {
+		summary.secondaryOrigins().forEach { add(reportBadge(it)) }
+		if (summary.revoked) add(ReportBadge(stringResource(R.string.revoked_badge), ReportBadgeStyle.ALERT))
+	}
+
 	val details = buildList {
-		if (summary.status == OverallStatus.NO_MANIFEST) {
-			add(stringResource(R.string.status_no_manifest_body))
-		} else {
+		if (manifestPresent) {
 			summary.signerName?.let { add(stringResource(R.string.summary_signer, it)) }
 			summary.claimGenerator?.let { add(stringResource(R.string.summary_generator, it)) }
 			summary.signedTime?.let { add(stringResource(R.string.summary_signed_time, it)) }
 		}
 	}
-	val badges = buildList {
-		if (summary.ai.isAiGenerated) {
-			add(ReportBadge(stringResource(R.string.ai_badge), ReportBadgeStyle.AI))
-		}
-		if (summary.aiModified.isAiModified) {
-			add(ReportBadge(stringResource(R.string.ai_modified_badge), ReportBadgeStyle.AI))
-		}
-		if (summary.capture.isCameraCapture) {
-			add(ReportBadge(stringResource(R.string.capture_badge), ReportBadgeStyle.CAPTURE))
-		}
-		if (summary.revoked) {
-			add(ReportBadge(stringResource(R.string.revoked_badge), ReportBadgeStyle.ALERT))
-		}
-	}
+
 	return ReportOverlay(
-		statusLabel = statusLabel,
+		headline = headline,
+		tagline = tagline,
+		headlineStyle = origin?.style,
 		tone = toneFor(summary.status),
-		details = details,
 		badges = badges,
+		// Demoted verdict line only when an origin led the hero; otherwise the hero already is it.
+		trustLabel = statusLabel.takeIf { hasOrigin && manifestPresent },
+		details = details,
 		watermark = stringResource(R.string.report_watermark),
 	)
+}
+
+/** Headline label + tagline + accent style for a primary content origin on the report. */
+private class OriginReport(val label: String, val tagline: String, val style: ReportBadgeStyle)
+
+@Composable
+private fun originReport(origin: ContentOrigin): OriginReport? = when (origin) {
+	ContentOrigin.AI_GENERATED -> OriginReport(
+		stringResource(R.string.ai_badge), stringResource(R.string.origin_ai_tagline), ReportBadgeStyle.AI,
+	)
+
+	ContentOrigin.AI_MODIFIED -> OriginReport(
+		stringResource(R.string.ai_modified_badge), stringResource(R.string.origin_ai_modified_tagline), ReportBadgeStyle.AI,
+	)
+
+	ContentOrigin.CAMERA_CAPTURE -> OriginReport(
+		stringResource(R.string.capture_badge), stringResource(R.string.origin_capture_tagline), ReportBadgeStyle.CAPTURE,
+	)
+
+	ContentOrigin.SOFTWARE_CREATED -> OriginReport(
+		stringResource(R.string.software_badge), stringResource(R.string.origin_software_tagline), ReportBadgeStyle.SOFTWARE,
+	)
+
+	ContentOrigin.ENHANCED -> OriginReport(
+		stringResource(R.string.enhanced_badge), stringResource(R.string.origin_enhanced_tagline), ReportBadgeStyle.ENHANCED,
+	)
+
+	ContentOrigin.EDITED -> OriginReport(
+		stringResource(R.string.edited_badge), stringResource(R.string.origin_edited_tagline), ReportBadgeStyle.EDITED,
+	)
+
+	ContentOrigin.UNKNOWN, ContentOrigin.NONE -> null
+}
+
+/** Secondary content-origin pill for the report. */
+@Composable
+private fun reportBadge(origin: ContentOrigin): ReportBadge = when (origin) {
+	ContentOrigin.AI_GENERATED -> ReportBadge(stringResource(R.string.ai_badge), ReportBadgeStyle.AI)
+	ContentOrigin.AI_MODIFIED -> ReportBadge(stringResource(R.string.ai_modified_badge), ReportBadgeStyle.AI)
+	ContentOrigin.CAMERA_CAPTURE -> ReportBadge(stringResource(R.string.capture_badge), ReportBadgeStyle.CAPTURE)
+	ContentOrigin.SOFTWARE_CREATED -> ReportBadge(stringResource(R.string.software_badge), ReportBadgeStyle.SOFTWARE)
+	ContentOrigin.ENHANCED -> ReportBadge(stringResource(R.string.enhanced_badge), ReportBadgeStyle.ENHANCED)
+	ContentOrigin.EDITED -> ReportBadge(stringResource(R.string.edited_badge), ReportBadgeStyle.EDITED)
+	ContentOrigin.UNKNOWN, ContentOrigin.NONE -> ReportBadge(stringResource(R.string.edited_badge), ReportBadgeStyle.EDITED)
 }

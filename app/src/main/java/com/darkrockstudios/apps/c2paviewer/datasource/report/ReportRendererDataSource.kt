@@ -85,16 +85,27 @@ class ReportRendererDataSource(private val context: Context) {
 		val bodySize = unit * 1.15f
 		val markSize = unit * 0.95f
 		val lineGap = bodySize * 0.55f
+		val sectionGap = bodySize * 0.8f
 
 		val titlePaint = textPaint(titleSize, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
+		val taglinePaint = textPaint(bodySize, Typeface.DEFAULT).apply { alpha = 200 }
 		val bodyPaint = textPaint(bodySize, Typeface.DEFAULT).apply { alpha = 230 }
+		val trustPaint = textPaint(bodySize, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
 		val markPaint = textPaint(markSize, Typeface.DEFAULT).apply { alpha = 150 }
+		val badgePaint = textPaint(bodySize, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
 
 		val contentWidth = width - 2 * margin - 2 * padding
-		val lines = overlay.details.flatMap { wrap(it, bodyPaint, contentWidth) }
 
-		// Lay the indicator pills out into (wrapping) rows up front so we can size the panel.
-		val badgePaint = textPaint(bodySize, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
+		// The hero accent: the origin badge colour, or the trust tone when the verdict leads.
+		val accentColor = overlay.headlineStyle?.let { badgeColor(it) } ?: toneColor(overlay.tone)
+
+		// Hero headline (+ tagline), wrapped to fit beside the accent dot.
+		val dotR = titleSize * 0.32f
+		val headlineInset = dotR * 2 + padding * 0.5f
+		val headlineLines = wrap(overlay.headline, titlePaint, contentWidth - headlineInset)
+		val taglineLines = overlay.tagline?.let { wrap(it, taglinePaint, contentWidth) }.orEmpty()
+
+		// Secondary pills, laid into wrapping rows up front so we can size the panel.
 		val pillHeight = bodySize * 2.1f
 		val pillGap = padding * 0.5f
 		val pills = overlay.badges.map { badge ->
@@ -103,41 +114,71 @@ class ReportRendererDataSource(private val context: Context) {
 		}
 		val badgeRows = flowIntoRows(pills, contentWidth, pillGap)
 
-		// Measure panel height: status row + detail lines + badge rows + watermark.
-		val titleHeight = lineHeight(titlePaint)
-		val bodyLineHeight = lineHeight(bodyPaint) + lineGap
-		val badgeAreaHeight = if (badgeRows.isEmpty()) 0f else badgeRows.size * (pillHeight + lineGap)
-		val markHeight = lineHeight(markPaint) + lineGap
-		val panelHeight = padding * 2 + titleHeight + lines.size * bodyLineHeight + badgeAreaHeight + markHeight
+		// Demoted trust line + signer details.
+		val trustDotR = bodySize * 0.34f
+		val trustInset = trustDotR * 2 + padding * 0.4f
+		val trustLines = overlay.trustLabel?.let { wrap(it, trustPaint, contentWidth - trustInset) }.orEmpty()
+		val detailLines = overlay.details.flatMap { wrap(it, bodyPaint, contentWidth) }
 
+		// Measure the panel: hero + (badges) + (trust + details) + watermark.
+		val titleLineH = lineHeight(titlePaint)
+		val bodyLineH = lineHeight(bodyPaint)
+		val trustLineH = lineHeight(trustPaint)
+		val markLineH = lineHeight(markPaint)
+
+		var contentH = 0f
+		contentH += headlineLines.size * (titleLineH + lineGap)
+		contentH += taglineLines.size * (bodyLineH + lineGap)
+		if (badgeRows.isNotEmpty()) contentH += sectionGap + badgeRows.size * (pillHeight + lineGap)
+		if (trustLines.isNotEmpty() || detailLines.isNotEmpty()) contentH += sectionGap
+		contentH += trustLines.size * (trustLineH + lineGap)
+		contentH += detailLines.size * (bodyLineH + lineGap)
+		contentH += sectionGap + markLineH
+
+		val panelHeight = padding * 2 + contentH
 		val panel = RectF(margin, height - margin - panelHeight, width - margin, height - margin)
 		val corner = unit * 0.8f
 		canvas.drawRoundRect(panel, corner, corner, fillPaint(0xE6101418.toInt()))
 
-		var y = panel.top + padding
 		val x = panel.left + padding
+		var y = panel.top + padding
 
-		// Status row: a tone-coloured dot + bold label.
-		val dotR = titleSize * 0.32f
-		val baseline = y + titlePaint.textSize * 0.82f
-		canvas.drawCircle(x + dotR, y + titleHeight / 2f, dotR, fillPaint(toneColor(overlay.tone)))
-		canvas.drawText(overlay.statusLabel, x + dotR * 2 + padding * 0.5f, baseline, titlePaint)
-		y += titleHeight + lineGap
-
-		for (line in lines) {
-			canvas.drawText(line, x, y + bodyPaint.textSize * 0.82f, bodyPaint)
-			y += bodyLineHeight
+		// Hero: accent dot + bold headline.
+		headlineLines.forEachIndexed { i, line ->
+			if (i == 0) canvas.drawCircle(x + dotR, y + titleLineH / 2f, dotR, fillPaint(accentColor))
+			canvas.drawText(line, x + headlineInset, y + titlePaint.textSize * 0.82f, titlePaint)
+			y += titleLineH + lineGap
+		}
+		for (line in taglineLines) {
+			canvas.drawText(line, x + headlineInset, y + taglinePaint.textSize * 0.82f, taglinePaint)
+			y += bodyLineH + lineGap
 		}
 
-		for (row in badgeRows) {
-			var bx = x
-			for (pill in row) {
-				val rect = RectF(bx, y, bx + pill.width, y + pillHeight)
-				canvas.drawRoundRect(rect, pillHeight / 2f, pillHeight / 2f, fillPaint(badgeColor(pill.style)))
-				canvas.drawText(pill.text, rect.left + padding * 0.8f, rect.centerY() + badgePaint.textSize * 0.35f, badgePaint)
-				bx += pill.width + pillGap
+		// Secondary pills.
+		if (badgeRows.isNotEmpty()) {
+			y += sectionGap
+			for (row in badgeRows) {
+				var bx = x
+				for (pill in row) {
+					val rect = RectF(bx, y, bx + pill.width, y + pillHeight)
+					canvas.drawRoundRect(rect, pillHeight / 2f, pillHeight / 2f, fillPaint(badgeColor(pill.style)))
+					canvas.drawText(pill.text, rect.left + padding * 0.8f, rect.centerY() + badgePaint.textSize * 0.35f, badgePaint)
+					bx += pill.width + pillGap
+				}
+				y += pillHeight + lineGap
 			}
-			y += pillHeight + lineGap
+		}
+
+		// Demoted trust verdict + signer details.
+		if (trustLines.isNotEmpty() || detailLines.isNotEmpty()) y += sectionGap
+		trustLines.forEachIndexed { i, line ->
+			if (i == 0) canvas.drawCircle(x + trustDotR, y + trustLineH / 2f, trustDotR, fillPaint(toneColor(overlay.tone)))
+			canvas.drawText(line, x + trustInset, y + trustPaint.textSize * 0.82f, trustPaint)
+			y += trustLineH + lineGap
+		}
+		for (line in detailLines) {
+			canvas.drawText(line, x, y + bodyPaint.textSize * 0.82f, bodyPaint)
+			y += bodyLineH + lineGap
 		}
 
 		// Brand mark, bottom-right of the panel.
@@ -216,14 +257,20 @@ class ReportRendererDataSource(private val context: Context) {
 	}
 
 	private fun badgeGlyph(style: ReportBadgeStyle): String = when (style) {
-		ReportBadgeStyle.AI -> "✨"          // ✨
-		ReportBadgeStyle.CAPTURE -> "📷" // 📷
-		ReportBadgeStyle.ALERT -> "⛔"        // ⛔
+		ReportBadgeStyle.AI -> "✨"
+		ReportBadgeStyle.CAPTURE -> "📷"
+		ReportBadgeStyle.SOFTWARE -> "🖌"
+		ReportBadgeStyle.ENHANCED -> "🪄"
+		ReportBadgeStyle.EDITED -> "✏️"
+		ReportBadgeStyle.ALERT -> "⛔"
 	}
 
 	private fun badgeColor(style: ReportBadgeStyle): Int = when (style) {
 		ReportBadgeStyle.AI -> AI_COLOR
 		ReportBadgeStyle.CAPTURE -> CAPTURE_COLOR
+		ReportBadgeStyle.SOFTWARE -> SOFTWARE_COLOR
+		ReportBadgeStyle.ENHANCED -> ENHANCED_COLOR
+		ReportBadgeStyle.EDITED -> EDITED_COLOR
 		ReportBadgeStyle.ALERT -> ALERT_COLOR
 	}
 
@@ -234,6 +281,9 @@ class ReportRendererDataSource(private val context: Context) {
 		const val FILEPROVIDER_SUFFIX = ".fileprovider"
 		val AI_COLOR = 0xFF7C4DFF.toInt()
 		val CAPTURE_COLOR = 0xFF1565C0.toInt()
+		val SOFTWARE_COLOR = 0xFF00897B.toInt()
+		val ENHANCED_COLOR = 0xFFEF6C00.toInt()
+		val EDITED_COLOR = 0xFF5C6BC0.toInt()
 		val ALERT_COLOR = 0xFFD32F2F.toInt()
 	}
 }
