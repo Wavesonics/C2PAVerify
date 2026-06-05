@@ -20,7 +20,7 @@ pick or share a photo in, see whether provenance data is present and whether the
 - **Gradle** (kts) with the `gradle/libs.versions.toml` **version catalog** — add every dependency
   and plugin there, reference via `libs.*`. (Amper was evaluated and declined; see PLAN.md.)
 - Single `:app` module. AGP 9.2.1, Kotlin 2.2.10, Compose BOM 2026.02.01, Material 3, JDK 17,
-  minSdk 29, targetSdk 36, namespace `com.darkrockstudios.apps.c2paviewer`.
+  minSdk 29, targetSdk 36, namespace `c2paverify`.
 - Key libs: Koin (DI), Room + KSP (structured storage), Preferences DataStore (simple prefs),
   Ktor (HTTP), Coil 3 + Telephoto (image + zoom), Napier (logging), kotlinx.serialization (JSON).
 - **c2pa-android** comes from a *restricted* JitPack repo (`includeGroup("com.github.contentauth")`)
