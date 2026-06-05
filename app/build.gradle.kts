@@ -17,8 +17,8 @@ android {
 		applicationId = "com.darkrockstudios.apps.c2paverify"
 		minSdk = 29
 		targetSdk = 36
-		versionCode = 1
-		versionName = "1.0"
+		versionCode = libs.versions.app.versioncode.get().toInt()
+		versionName = libs.versions.app.version.get()
 
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
