@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import androidx.core.content.FileProvider
@@ -126,9 +127,11 @@ class ReportRendererDataSource(private val context: Context) {
 		val trustLineH = lineHeight(trustPaint)
 		val markLineH = lineHeight(markPaint)
 
+		val heroContentH = headlineLines.size * (titleLineH + lineGap) +
+			taglineLines.size * (bodyLineH + lineGap)
+
 		var contentH = 0f
-		contentH += headlineLines.size * (titleLineH + lineGap)
-		contentH += taglineLines.size * (bodyLineH + lineGap)
+		contentH += heroContentH
 		if (badgeRows.isNotEmpty()) contentH += sectionGap + badgeRows.size * (pillHeight + lineGap)
 		if (trustLines.isNotEmpty() || detailLines.isNotEmpty()) contentH += sectionGap
 		contentH += trustLines.size * (trustLineH + lineGap)
@@ -139,6 +142,10 @@ class ReportRendererDataSource(private val context: Context) {
 		val panel = RectF(margin, height - margin - panelHeight, width - margin, height - margin)
 		val corner = unit * 0.8f
 		canvas.drawRoundRect(panel, corner, corner, fillPaint(0xE6101418.toInt()))
+
+		// Hero band: a tinted strip behind the headline so it leads the panel, echoing the in-app card.
+		val heroBand = RectF(panel.left, panel.top, panel.right, panel.top + padding + heroContentH + sectionGap * 0.5f)
+		fillTopRoundRect(canvas, heroBand, corner, fillPaint(withAlpha(accentColor, HERO_BAND_ALPHA)))
 
 		val x = panel.left + padding
 		var y = panel.top + padding
@@ -211,6 +218,21 @@ class ReportRendererDataSource(private val context: Context) {
 		color = argb
 	}
 
+	/** Replaces the alpha byte of an opaque ARGB colour, for tinted fills. */
+	private fun withAlpha(argb: Int, alpha: Int): Int = (alpha shl 24) or (argb and 0x00FFFFFF)
+
+	/** Fills a rect whose top corners are rounded by [radius] and bottom corners are square. */
+	private fun fillTopRoundRect(canvas: Canvas, rect: RectF, radius: Float, paint: Paint) {
+		val path = Path().apply {
+			addRoundRect(
+				rect,
+				floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f),
+				Path.Direction.CW,
+			)
+		}
+		canvas.drawPath(path, paint)
+	}
+
 	private fun lineHeight(paint: Paint): Float = paint.fontMetrics.let { it.descent - it.ascent }
 
 	/** Greedy word-wrap so long signer names don't overflow the panel. */
@@ -276,6 +298,8 @@ class ReportRendererDataSource(private val context: Context) {
 
 	private companion object {
 		const val MAX_EDGE_PX = 2048
+		// Tint strength (~20% over the dark panel) for the hero band behind the headline.
+		const val HERO_BAND_ALPHA = 0x33
 		const val REPORT_DIR = "reports"
 		const val REPORT_FILE = "c2pa-report.png"
 		const val FILEPROVIDER_SUFFIX = ".fileprovider"

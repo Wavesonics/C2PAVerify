@@ -266,6 +266,42 @@ class SummaryFactoryTest {
 	}
 
 	@Test
+	fun `AI generation in a parent manifest wins the headline over a later transcode-enhance`() {
+		// The asset was fully AI-generated, then transcoded; the active manifest only records the
+		// transcode (algorithmicallyEnhanced) and points back to the AI root via a parentOf ingredient.
+		// The headline must still lead with AI-generated, with Enhanced demoted to a secondary chip.
+		val json = """
+			{
+			  "active_manifest": "active",
+			  "manifests": {
+			    "active": {
+			      "ingredients": [ { "relationship": "parentOf", "active_manifest": "root" } ],
+			      "assertions": [
+			        { "label": "c2pa.actions.v2", "data": { "actions": [
+			          { "action": "c2pa.transcoded",
+			            "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/algorithmicallyEnhanced" }
+			        ] } }
+			      ]
+			    },
+			    "root": {
+			      "assertions": [
+			        { "label": "c2pa.actions.v2", "data": { "actions": [
+			          { "action": "c2pa.created",
+			            "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" }
+			        ] } }
+			      ]
+			    }
+			  },
+			  "validation_state": "Valid"
+			}
+		""".trimIndent()
+		val summary = SummaryFactory.buildSummary(parser.parse(json), TrustLevel.TRUSTED)
+		assertTrue(summary.ai.isAiGenerated)
+		assertEquals(ContentOrigin.AI_GENERATED, summary.primaryOrigin())
+		assertTrue(summary.secondaryOrigins().contains(ContentOrigin.ENHANCED))
+	}
+
+	@Test
 	fun `detectAi ignores AI only in ingredient provenance, not the asset's own claim`() {
 		// Active manifest is a plain capture; only an *ingredient* manifest is AI-generated.
 		// The asset itself is not AI-generated, so the headline flag must stay false.
