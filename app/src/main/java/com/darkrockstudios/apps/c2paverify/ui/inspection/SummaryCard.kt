@@ -1,5 +1,6 @@
 package com.darkrockstudios.apps.c2paverify.ui.inspection
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -7,19 +8,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,19 +72,25 @@ fun SummaryCard(
 
 	val container = originVisuals?.container ?: statusVisuals.container
 	val onContainer = originVisuals?.onContainer ?: statusVisuals.onContainer
+	// A slightly stronger tint, derived from the headline's own accent, so the hero band reads as
+	// the most prominent part of the card and the details below sit on the plainer container.
+	val heroAccent = originVisuals?.accent ?: trustTint(summary.status)
+	val heroBackground = heroAccent.copy(alpha = 0.14f)
 
 	Card(
 		modifier = modifier.fillMaxWidth(),
 		colors = CardDefaults.cardColors(containerColor = container, contentColor = onContainer),
 	) {
-		Column(
-			modifier = Modifier.padding(16.dp),
-			verticalArrangement = Arrangement.spacedBy(12.dp),
-		) {
+		Column(modifier = Modifier.fillMaxWidth()) {
 			// HERO: the content-origin headline (or the trust verdict, when there's no origin signal).
+			// Full-bleed, tinted band so it stands out above the details.
 			val heroInfo = originVisuals?.info
 			Row(
-				modifier = if (heroInfo != null) Modifier.clickable { infoChip = heroInfo } else Modifier,
+				modifier = Modifier
+					.fillMaxWidth()
+					.background(heroBackground)
+					.then(if (heroInfo != null) Modifier.clickable { infoChip = heroInfo } else Modifier)
+					.padding(16.dp),
 				verticalAlignment = Alignment.CenterVertically,
 				horizontalArrangement = Arrangement.spacedBy(12.dp),
 			) {
@@ -91,6 +100,13 @@ fun SummaryCard(
 						contentDescription = null,
 						modifier = Modifier.size(32.dp),
 						tint = originVisuals.accent,
+					)
+				} else if (summary.status == OverallStatus.NO_MANIFEST) {
+					// "Missing provenance" mark for the no-Content-Credentials case.
+					Icon(
+						painter = painterResource(R.drawable.ic_unknown),
+						contentDescription = null,
+						modifier = Modifier.size(32.dp),
 					)
 				} else {
 					Icon(statusVisuals.icon, contentDescription = null, modifier = Modifier.size(32.dp))
@@ -120,52 +136,60 @@ fun SummaryCard(
 				}
 			}
 
-			// SECONDARY CHIPS: the remaining origin signals, plus a revoked-certificate alert.
-			val secondary = summary.secondaryOrigins()
-			if (secondary.isNotEmpty() || summary.revoked) {
-				FlowRow(
-					horizontalArrangement = Arrangement.spacedBy(8.dp),
-					verticalArrangement = Arrangement.spacedBy(8.dp),
-				) {
-					secondary.forEach { origin ->
-						OriginChip(origin, onClick = { infoChip = chipInfoFor(origin) })
+			Column(
+				modifier = Modifier.padding(16.dp),
+				verticalArrangement = Arrangement.spacedBy(12.dp),
+			) {
+				// SECONDARY CHIPS: the remaining origin signals, plus a revoked-certificate alert.
+				val secondary = summary.secondaryOrigins()
+				if (secondary.isNotEmpty() || summary.revoked) {
+					FlowRow(
+						horizontalArrangement = Arrangement.spacedBy(8.dp),
+						verticalArrangement = Arrangement.spacedBy(8.dp),
+					) {
+						secondary.forEach { origin ->
+							OriginChip(origin, onClick = { infoChip = chipInfoFor(origin) })
+						}
+						if (summary.revoked) {
+							AssistChip(
+								onClick = { infoChip = ChipInfo.REVOKED },
+								label = { Text(stringResource(R.string.revoked_badge)) },
+								leadingIcon = {
+									Icon(
+										painter = painterResource(ChipInfo.REVOKED.iconRes),
+										contentDescription = null,
+										modifier = Modifier.size(AssistChipDefaults.IconSize),
+									)
+								},
+								colors = AssistChipDefaults.assistChipColors(
+									labelColor = MaterialTheme.colorScheme.error,
+									leadingIconContentColor = MaterialTheme.colorScheme.error,
+								),
+							)
+						}
 					}
-					if (summary.revoked) {
-						AssistChip(
-							onClick = { infoChip = ChipInfo.REVOKED },
-							label = { Text(stringResource(R.string.revoked_badge)) },
-							leadingIcon = {
-								Icon(
-									painter = painterResource(ChipInfo.REVOKED.iconRes),
-									contentDescription = null,
-									modifier = Modifier.size(AssistChipDefaults.IconSize),
-								)
-							},
-							colors = AssistChipDefaults.assistChipColors(
-								labelColor = MaterialTheme.colorScheme.error,
-								leadingIconContentColor = MaterialTheme.colorScheme.error,
-							),
+				}
+
+				// TRUST (demoted): a compact verdict line + signer details, beneath the origin headline.
+				when {
+					summary.status == OverallStatus.NO_MANIFEST -> Unit
+
+					hasOrigin -> TrustLine(summary, onContainer)
+
+					// No origin signal: the hero already showed the verdict, so just list the signer.
+					else -> SignerLines(summary, onContainer)
+				}
+
+				if (onViewDetails != null) {
+					TextButton(onClick = onViewDetails) {
+						Icon(
+							Icons.Filled.Search,
+							contentDescription = null,
+							modifier = Modifier.size(ButtonDefaults.IconSize),
 						)
+						Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+						Text(stringResource(R.string.view_details))
 					}
-				}
-			}
-
-			// TRUST (demoted): a compact verdict line + signer details, beneath the origin headline.
-			when {
-				summary.status == OverallStatus.NO_MANIFEST -> Unit
-
-				hasOrigin -> {
-					HorizontalDivider(color = onContainer.copy(alpha = 0.15f))
-					TrustLine(summary, onContainer)
-				}
-
-				// No origin signal: the hero already showed the verdict, so just list the signer.
-				else -> SignerLines(summary, onContainer)
-			}
-
-			if (onViewDetails != null) {
-				TextButton(onClick = onViewDetails) {
-					Text(stringResource(R.string.view_details))
 				}
 			}
 		}

@@ -278,10 +278,11 @@ private fun assertionTitle(label: String): String = when {
 @Composable
 private fun ActionsTimelineSection(manifest: C2paManifestData) {
 	val actions = remember(manifest) {
-		manifest.activeManifest?.assertions
-			?.filter { AssertionParser.isActionsAssertion(it.label) }
-			?.flatMap { AssertionParser.parseActions(it.data) }
-			.orEmpty()
+		manifest.manifestChain.flatMap { m ->
+			m.assertions
+				.filter { AssertionParser.isActionsAssertion(it.label) }
+				.flatMap { AssertionParser.parseActions(it.data) }
+		}
 	}
 	var info by remember { mutableStateOf<ParsedAction?>(null) }
 	info?.let { ActionInfoDialog(it, onDismiss = { info = null }) }
@@ -478,9 +479,9 @@ private fun actionIcon(code: String): ImageVector = when {
 private val CREATION_ACTIONS = setOf("c2pa.created", "c2pa.opened", "c2pa.placed")
 
 private val EDITING_ACTIONS = setOf(
-	"c2pa.edited", "c2pa.cropped", "c2pa.color_adjustments", "c2pa.drawing",
-	"c2pa.filtered", "c2pa.resized", "c2pa.orientation", "c2pa.watermarked",
-	"c2pa.metadata", "c2pa.redacted",
+	"c2pa.edited", "c2pa.cropped", "c2pa.color_adjustments", "c2pa.adjustedColor",
+	"c2pa.enhanced", "c2pa.drawing", "c2pa.filtered", "c2pa.resized",
+	"c2pa.orientation", "c2pa.watermarked", "c2pa.metadata", "c2pa.redacted",
 )
 
 @Composable

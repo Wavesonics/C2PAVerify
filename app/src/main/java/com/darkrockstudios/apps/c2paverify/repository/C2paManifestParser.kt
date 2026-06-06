@@ -76,6 +76,7 @@ class C2paManifestParser(private val json: Json) {
 				relationship = i.string("relationship"),
 				instanceId = i.string("instance_id"),
 				documentId = i.string("document_id"),
+				activeManifest = i.string("active_manifest"),
 			)
 		}.orEmpty(),
 	)

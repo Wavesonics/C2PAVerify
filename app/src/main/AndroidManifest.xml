@@ -5,6 +5,15 @@
     <!-- Refresh the C2PA trust list from the network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+      Read ORIGINAL, un-redacted image bytes. Without this, MediaProvider zeroes the GPS-location
+      EXIF when our app reads a photo through any media-backed URI (Photo Picker, the media SAF root,
+      direct content://media/...), which mutates the bytes and breaks the C2PA data-hash hard binding
+      -> spurious assertion.dataHash.mismatch. Paired with MediaStore.setRequireOriginal() in
+      ImageBytesDataSource.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
     <application
         android:name=".C2paVerifyApp"
         android:allowBackup="true"

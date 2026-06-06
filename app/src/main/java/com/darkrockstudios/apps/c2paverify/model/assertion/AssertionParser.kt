@@ -57,6 +57,8 @@ object AssertionParser {
 		"c2pa.edited" -> "Edited"
 		"c2pa.cropped" -> "Cropped"
 		"c2pa.color_adjustments" -> "Color adjustments"
+		"c2pa.adjustedColor" -> "Adjusted color"
+		"c2pa.enhanced" -> "Enhanced"
 		"c2pa.drawing" -> "Drawing / painting"
 		"c2pa.filtered" -> "Filtered"
 		"c2pa.resized" -> "Resized"

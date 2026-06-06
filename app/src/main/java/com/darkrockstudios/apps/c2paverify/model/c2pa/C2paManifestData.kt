@@ -19,6 +19,32 @@ data class C2paManifestData(
 	val activeManifest: C2paManifest? =
 		manifests.firstOrNull { it.id == activeManifestId } ?: manifests.firstOrNull()
 
+	/**
+	 * The full provenance chain of manifests, ordered oldest-first (the original capture manifest
+	 * is first, the most recent edit manifest is last). Walks `parentOf` ingredient references
+	 * from the active manifest back to the root, then reverses. Falls back to just [activeManifest]
+	 * if the chain can't be reconstructed.
+	 */
+	val manifestChain: List<C2paManifest> by lazy {
+		val active = activeManifest ?: return@lazy emptyList()
+		val byId = manifests.associateBy { it.id }
+		val chain = mutableListOf(active)
+		val visited = mutableSetOf(active.id)
+		var current = active
+		while (true) {
+			val parentRef = current.ingredients
+				.firstOrNull { it.relationship == "parentOf" }
+				?.activeManifest
+				?: break
+			if (parentRef in visited) break // cycle guard
+			val parent = byId[parentRef] ?: break
+			chain.add(parent)
+			visited.add(parentRef)
+			current = parent
+		}
+		chain.reversed()
+	}
+
 	/** Failure-category issues affecting the active manifest's integrity (not mere trust). */
 	val integrityFailures: List<ValidationIssue>
 		get() = validationIssues.filter { it.category == ValidationCategory.FAILURE && it.isIntegrityFailure }
@@ -80,6 +106,8 @@ data class C2paIngredient(
 	val relationship: String?,
 	val instanceId: String?,
 	val documentId: String?,
+	/** Manifest ID of this ingredient's own C2PA manifest (if it carried one). */
+	val activeManifest: String? = null,
 )
 
 enum class ValidationCategory { SUCCESS, INFORMATIONAL, FAILURE, UNKNOWN }

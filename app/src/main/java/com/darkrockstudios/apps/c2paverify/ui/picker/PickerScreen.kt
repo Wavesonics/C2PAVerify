@@ -1,7 +1,7 @@
 package com.darkrockstudios.apps.c2paverify.ui.picker
 
+import android.Manifest.permission.ACCESS_MEDIA_LOCATION
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -82,9 +82,19 @@ fun PickerScreen(
 	onOpenTrust: () -> Unit,
 	onShowOnboarding: () -> Unit,
 ) {
-	val pickMedia = rememberLauncherForActivityResult(
-		ActivityResultContracts.PickVisualMedia(),
+	// Deliberately ACTION_OPEN_DOCUMENT (SAF), NOT the Photo Picker: the picker only exposes
+	// pre-redacted picker:// URIs. SAF can still hand back a media-backed URI that MediaProvider
+	// redacts, so ImageBytesDataSource re-reads the original via ACCESS_MEDIA_LOCATION +
+	// setRequireOriginal — which is why we request that permission before opening the picker.
+	val openDocument = rememberLauncherForActivityResult(
+		ActivityResultContracts.OpenDocument(),
 	) { uri -> if (uri != null) onImagePicked(uri.toString()) }
+
+	// Request ACCESS_MEDIA_LOCATION (needed to read un-redacted GPS EXIF so the C2PA hash stays
+	// intact), then open the document picker regardless of the user's choice.
+	val requestMediaLocation = rememberLauncherForActivityResult(
+		ActivityResultContracts.RequestPermission(),
+	) { openDocument.launch(arrayOf("image/*")) }
 
 	Scaffold(
 		topBar = {
@@ -142,11 +152,7 @@ fun PickerScreen(
 					textAlign = TextAlign.Center,
 				)
 				Button(
-					onClick = {
-						pickMedia.launch(
-							PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-						)
-					},
+					onClick = { requestMediaLocation.launch(ACCESS_MEDIA_LOCATION) },
 				) {
 					Text(stringResource(R.string.pick_photo))
 				}

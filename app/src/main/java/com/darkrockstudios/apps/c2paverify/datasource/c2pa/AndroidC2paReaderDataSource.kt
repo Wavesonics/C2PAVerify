@@ -6,7 +6,6 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.contentauth.c2pa.C2PAContext
-import org.contentauth.c2pa.C2PAError
 import org.contentauth.c2pa.C2PASettings
 import org.contentauth.c2pa.DataStream
 import org.contentauth.c2pa.FileStream
@@ -16,6 +15,7 @@ import org.contentauth.c2pa.settings.C2PASettingsDefinition
 import org.contentauth.c2pa.settings.TrustSettings
 import org.contentauth.c2pa.settings.VerifySettings
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The ONLY file that touches the `org.contentauth.c2pa` library. All blocking JNI calls run on
@@ -33,8 +33,14 @@ class AndroidC2paReaderDataSource : C2paReaderDataSource {
 			buildStream(image).use { stream ->
 				try {
 					openAndExtract(format, stream, trust)
-				} catch (e: C2PAError) {
-					if (e.indicatesNoManifest()) {
+				} catch (e: CancellationException) {
+					throw e
+				} catch (e: Exception) {
+					// The "no embedded manifest" case is normal (most photos). The library surfaces it
+					// inconsistently: a typed C2PAError on the no-trust path, but a plain RuntimeException
+					// ("ManifestNotFound: no JUMBF data found") on the trust path — so match on the message
+					// for any exception type rather than the class.
+					if (indicatesNoManifest(e.message)) {
 						Napier.d(tag = TAG) { "No C2PA manifest present: ${e.message}" }
 						C2paRawRead.NoManifest
 					} else {
@@ -99,13 +105,13 @@ class AndroidC2paReaderDataSource : C2paReaderDataSource {
 }
 
 /**
- * Best-effort detection of the "asset has no embedded manifest" case. The native layer surfaces it
- * as a [C2PAError] whose message mentions a missing manifest/JUMBF (the exact subtype varies, e.g.
- * `ManifestNotFound: no JUMBF data found`), so match on the message text of any subtype.
+ * Best-effort detection of the "asset has no embedded manifest" case from an exception [message].
+ * The native layer surfaces it inconsistently — a typed [C2PAError] on the no-trust path, a plain
+ * `RuntimeException` on the trust path — but always with text mentioning a missing manifest/JUMBF
+ * (e.g. `ManifestNotFound: no JUMBF data found`), so match on the message text rather than the type.
  */
-private fun C2PAError.indicatesNoManifest(): Boolean {
-	val raw = message?.lowercase() ?: return false
-	val compact = raw.replace(" ", "").replace("_", "")
+private fun indicatesNoManifest(message: String?): Boolean {
+	val compact = message?.lowercase()?.replace(" ", "")?.replace("_", "") ?: return false
 	return listOf(
 		"manifestnotfound",
 		"jumbfnotfound",
