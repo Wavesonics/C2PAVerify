@@ -1,0 +1,3 @@
+First release of C2PA Verify.
+
+Inspect the Content Credentials embedded in any photo: see who signed it, the tool that made it, whether it was edited or AI-generated, and whether you can trust the signer.

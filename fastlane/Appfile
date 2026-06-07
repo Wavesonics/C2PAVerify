@@ -1,0 +1,2 @@
+package_name("com.darkrockstudios.apps.c2paverify")
+json_key_file("play-store-config.json")

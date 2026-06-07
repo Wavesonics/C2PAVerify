@@ -8,3 +8,13 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Play Store publishing secrets, materialised at runtime in CI (never commit)
+/play-store-config.json
+*.keystore
+# fastlane run artifacts
+/fastlane/report.xml
+/fastlane/Preview.html
+
+/app/release
+/app/release/
