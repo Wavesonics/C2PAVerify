@@ -7,7 +7,9 @@
 **See who made a photo, and whether you can trust it.**
 
 [![CI](https://github.com/Wavesonics/C2PAVerify/actions/workflows/ci.yml/badge.svg)](https://github.com/Wavesonics/C2PAVerify/actions/workflows/ci.yml)
+<!--
 [![Google Play](https://img.shields.io/endpoint?color=green&logo=google-play&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dcom.darkrockstudios.apps.c2paverify%26l%3DGoogle%2520Play%26m%3D%24version)](https://play.google.com/store/apps/details?id=com.darkrockstudios.apps.c2paverify)
+-->
 [![.apk](https://img.shields.io/github/v/release/Wavesonics/C2PAVerify?logo=android&logoColor=white&label=.apk&color=3DDC84)](https://github.com/Wavesonics/C2PAVerify/releases/latest)
 
 </div>
