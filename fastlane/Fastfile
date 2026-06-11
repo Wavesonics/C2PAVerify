@@ -14,7 +14,7 @@ platform :android do
       }
     )
     upload_to_play_store(
-      track: 'production',
+      track: 'internal',
       aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
       skip_upload_metadata: false,
       skip_upload_images: false,
