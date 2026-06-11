@@ -1,9 +1,27 @@
+import com.android.build.api.variant.FilterConfiguration.FilterType.ABI
+
 plugins {
 	alias(libs.plugins.android.application)
 	alias(libs.plugins.kotlin.compose)
 	alias(libs.plugins.kotlin.serialization)
 	alias(libs.plugins.ksp)
 }
+
+// Per-ABI offset added to the base versionCode so each split APK carries a unique code,
+// ordered so 64-bit ABIs outrank their 32-bit counterparts on multi-ABI devices.
+val abiVersionCodeOffsets = mapOf(
+	"armeabi-v7a" to 1,
+	"x86" to 2,
+	"x86_64" to 3,
+	"arm64-v8a" to 4,
+)
+
+// Set -PplayBundle=true for the Play AAB build (see fastlane deploy lane). Play does its own
+// per-device splitting and prefers uncompressed native libs, so the AAB disables ABI splits and
+// native-lib compression. (Splits + resource shrinking are also incompatible with bundleRelease:
+// https://issuetracker.google.com/402800800.) The default builds the standalone split APKs for
+// GitHub/IzzyOnDroid, where per-ABI splitting + compression keep each APK under 30 MB.
+val playBundle = providers.gradleProperty("playBundle").orNull?.toBoolean() ?: false
 
 android {
 	namespace = "com.darkrockstudios.apps.c2paverify"
@@ -23,6 +41,17 @@ android {
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 	}
 
+	// Split into one APK per ABI: a universal APK bundling all four would exceed the
+	// 30 MB per-APK ceiling of the IzzyOnDroid F-Droid repo (libc2pa_c.so is ~21 MB each).
+	splits {
+		abi {
+			isEnable = !playBundle
+			reset()
+			include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+			isUniversalApk = false
+		}
+	}
+
 	// CI signs release builds from a keystore passed via env vars (see .github/workflows/release.yml).
 	// Locally these are unset, so release builds stay unsigned and debug builds are unaffected.
 	val releaseKeystore = System.getenv("KEYSTORE_FILE")
@@ -40,9 +69,12 @@ android {
 
 	buildTypes {
 		release {
-			optimization {
-				enable = false
-			}
+			isMinifyEnabled = true
+			isShrinkResources = true
+			proguardFiles(
+				getDefaultProguardFile("proguard-android-optimize.txt"),
+				"proguard-rules.pro",
+			)
 			if (releaseKeystore != null) {
 				signingConfig = signingConfigs.getByName("release")
 			}
@@ -56,6 +88,11 @@ android {
 		compose = true
 	}
 	packaging {
+		jniLibs {
+			// Compress native libs for the standalone split APKs to clear the 30 MB ceiling;
+			// the Play AAB ships them uncompressed (Play prefers extractNativeLibs=false).
+			useLegacyPackaging = !playBundle
+		}
 		resources {
 			excludes += setOf(
 				"/META-INF/{AL2.0,LGPL2.1}",
@@ -67,6 +104,17 @@ android {
 				"META-INF/NOTICE",
 				"META-INF/NOTICE.txt",
 			)
+		}
+	}
+}
+
+androidComponents {
+	onVariants { variant ->
+		variant.outputs.forEach { output ->
+			val abi = output.filters.find { it.filterType == ABI }?.identifier
+			val offset = abiVersionCodeOffsets[abi] ?: return@forEach
+			val baseCode = output.versionCode.get() ?: return@forEach
+			output.versionCode.set(offset * 1000 + baseCode)
 		}
 	}
 }

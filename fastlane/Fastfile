@@ -5,7 +5,13 @@ platform :android do
   lane :deploy do
     gradle(
       task: 'bundle',
-      build_type: 'Release'
+      build_type: 'Release',
+      # Build the AAB without ABI splits or native-lib compression: Play does its own
+      # per-device splitting and prefers uncompressed libs. Splits are reserved for the
+      # standalone APKs published to GitHub/IzzyOnDroid.
+      properties: {
+        'playBundle' => 'true'
+      }
     )
     upload_to_play_store(
       track: 'production',

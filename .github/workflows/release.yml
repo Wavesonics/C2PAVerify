@@ -41,18 +41,21 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease
 
-      - name: Prepare release artifact and notes
-        id: prep
+      - name: Prepare release artifacts and notes
         run: |
           version="${GITHUB_REF_NAME#v}"
-          apk=$(find app/build/outputs/apk/release -name '*.apk' | head -n1)
-          if [ -z "$apk" ]; then
+          mkdir -p dist
+          # One APK per ABI split; rename each to C2PAVerify-<version>-<abi>.apk.
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/release/*.apk)
+          if [ ${#apks[@]} -eq 0 ]; then
             echo "No release APK found" >&2
             exit 1
           fi
-          out="C2PAVerify-${version}.apk"
-          cp "$apk" "$out"
-          echo "apk=$out" >> "$GITHUB_OUTPUT"
+          for apk in "${apks[@]}"; do
+            abi=$(basename "$apk" | sed -E 's/^app-(.+)-release\.apk$/\1/')
+            cp "$apk" "dist/C2PAVerify-${version}-${abi}.apk"
+          done
           # Use the annotated tag's message body as the release notes.
           git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > release-notes.md
 
@@ -62,7 +65,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body_path: release-notes.md
-          files: ${{ steps.prep.outputs.apk }}
+          files: dist/*.apk
 
   publish-play-store:
     name: Build & Publish to Google Play
