@@ -89,10 +89,12 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
-      - name: Decode signing keystore
+      # Play requires the AAB signed with the registered upload key (the Play-managed keystore),
+      # which differs from the key used for the directly-distributed GitHub/IzzyOnDroid APKs.
+      - name: Decode Play upload keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          PLAY_KEYSTORE_BASE64: ${{ secrets.PLAY_KEYSTORE_BASE64 }}
+        run: echo "$PLAY_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.keystore"
 
       - name: Decode Play Store service account key
         env:
@@ -101,8 +103,8 @@ jobs:
 
       - name: Build bundle & upload to Play Store
         env:
-          KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_FILE: ${{ runner.temp }}/upload.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PLAY_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PLAY_KEY_PASSWORD }}
         run: bundle exec fastlane deploy

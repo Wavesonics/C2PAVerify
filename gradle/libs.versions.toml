@@ -1,6 +1,6 @@
 [versions]
-app-versioncode = "3"
-app-version = "0.2.2"
+app-versioncode = "4"
+app-version = "0.2.3"
 
 agp = "9.0.0"
 coreKtx = "1.16.0"
