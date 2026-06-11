@@ -1,5 +1,0 @@
-$kt = "C:\Program Files\Java\jdk-21\bin\keytool.exe"
-Write-Host "`n=== darkrock.keystore ==="
-& $kt -list -v -keystore "C:\Users\adamw\Code\Projects\C2PAVerify\darkrock.keystore" | Select-String "SHA1:"
-Write-Host "`n=== darkrock_googleplay_managed.keystore ==="
-& $kt -list -v -keystore "C:\Users\adamw\Code\Projects\C2PAVerify\darkrock_googleplay_managed.keystore" | Select-String "SHA1:"
