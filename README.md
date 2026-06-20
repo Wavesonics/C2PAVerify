@@ -36,6 +36,16 @@ We need to surface this information to users in a useful and easy to access mann
 a first attempt at that. I imagine in the future tools like this will be build right into web-browsers
 and image viewers, but until they are, I hope this tool might be useful to a couple people.
 
+## 🪨 Dark Rock Studios
+
+[**Dark Rock Studios**](https://darkrock.studio/) is all about building **Free and Open Source Software**.
+
+🐛 Found bugs?  
+💡 Have suggestions?  
+📚 Want to help translate?  
+🎮 Interested in our other apps?  
+👉 Join our community of Open Source enthusiasts on [**Discord**](https://discord.gg/ju2RQa5x8W)!
+
 ## Build
 
 ```bash
